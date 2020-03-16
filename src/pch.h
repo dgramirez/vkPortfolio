@@ -21,6 +21,5 @@
 #define GATEWARE_ENABLE_CORE
 #define GATEWARE_ENABLE_SYSTEM
 #define GATEWARE_ENABLE_INPUT
-#define GATEWARE_ENABLE_AUDIO
 #define NOMINMAX
 #include "../dep/Gateware/Gateware.h"
