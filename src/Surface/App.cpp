@@ -1,9 +1,13 @@
+#include <chrono>
 
 namespace {
-	//Initialization
+	//Initialization - Window
 	GW::SYSTEM::GWindow GWindow;
 	void GetResolution(uint32_t& _x, uint32_t& _y);
 	void GetScreenSize(uint32_t& _x, uint32_t& _y, uint32_t& _w, uint32_t& _h);
+	
+	//Initialization - Input
+	GW::INPUT::GInput GInput;
 
 	bool isRunnable = true;
 }
@@ -20,20 +24,60 @@ namespace App {
 			isRunnable = false;
 			return;
 		}
+		GWindow.SetWindowName("Derrick Ramirez's VkPortfolio");
+
 	}
 	
 	void Run() {
 		//Ensure that its runnable
 		if (isRunnable) {
+			//Setup Time
+			double t = 0.0;
+			const double dt = 1.0/60.0;
+			double ratio = 0.0;
+
+			auto current_time = std::chrono::high_resolution_clock::now();
+			double accumulator = 0;
+
 			//Process the Window Events
 			while (+GWindow.ProcessWindowEvents()) {
+				//Get Frame Time
+				auto new_time = std::chrono::high_resolution_clock::now();
+				double frameTime = (new_time - current_time).count() * 1e-9;
+				if (frameTime > 0.25)
+					frameTime = 0.25;
+				current_time = new_time;
 
+				//Increment Accumulator
+				accumulator += frameTime;
+
+				//Input
+				
+
+				//Delta Time Loop
+				while (accumulator >= dt) {
+					//Update
+
+
+					//Decrement Accumulator
+					accumulator -= dt;
+
+					//Increase Time
+					t += dt;
+				}
+
+				//Get ratio [For Future Physics]
+				ratio = accumulator / dt;
+
+				//Render
+				printf("%f\n", accumulator);
 			}
 		}
 	}
 
 	void Cleanup() {
 
+		GWindow = nullptr;
 	}
 }
 
