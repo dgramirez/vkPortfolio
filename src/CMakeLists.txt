@@ -8,6 +8,7 @@ if (WIN32)
 	add_executable(vkPortfolio ${FILES_SRC} ${FILES_H})
 	target_include_directories(vkPortfolio PUBLIC $ENV{VULKAN_SDK}/Include/)
 	target_link_directories(vkPortfolio PUBLIC $ENV{VULKAN_SDK}/Lib/)
+	target_link_libraries(vkPortfolio PUBLIC "vulkan-1.lib")
 
 	#Set the property for the linker language to be CXX
 	set_property(TARGET vkPortfolio PROPERTY LINKER_LANGUAGE CXX)
