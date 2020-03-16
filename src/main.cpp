@@ -1,5 +1,16 @@
+#include "Surface/App.h"
+
 int main() {
-	printf("Hello, World!\n");
+	//Initialize the Application (Window, Vulkan, ImGui)
+	App::Init();
+
+	//Main Loop
+	App::Run();
+
+	//Clean up the application
+	App::Cleanup();
+
+	//Program ran successful
 	return 0;
 }
 
