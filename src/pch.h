@@ -1,3 +1,6 @@
+//NO MINMAX WINDOWS >=O
+#define NOMINMAX
+
 //(My) SSE Math Library
 #include "../dep/sse_math/ssemath.h"
 
@@ -21,5 +24,4 @@
 #define GATEWARE_ENABLE_CORE
 #define GATEWARE_ENABLE_SYSTEM
 #define GATEWARE_ENABLE_INPUT
-#define NOMINMAX
 #include "../dep/Gateware/Gateware.h"
