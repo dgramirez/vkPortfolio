@@ -23,6 +23,8 @@ VkResult DestroyInstance();
 const char* GetPlatformSurfaceName();
 void PhysicalDeviceVerify();
 void GetBestPhysicalDevice();
+void SetQueueFamilyIndex();
+void GetQueueFamilyIndices();
 
 namespace VkCore {
 	bool vkInit(const GW::SYSTEM::UNIVERSAL_WINDOW_HANDLE& uwh) {
@@ -204,11 +206,15 @@ VkResult SetupPhysicalDevice() {
 
 	//Get a physical device from file (Future)
 //	GetPhysicalDeviceFromFile();
-	if (vkGlobals.physicalDevice) 
+	if (vkGlobals.physicalDevice)
 		return VK_SUCCESS;
 
 	//Find best one to use.
 	GetBestPhysicalDevice();
+
+	//Get the best Queue Family Indices Set up
+	GetQueueFamilyIndices();
+
 	return VK_SUCCESS;
 }
 
@@ -247,7 +253,7 @@ void PhysicalDeviceVerify() {
 		if (extCount < 1) {
 			//This is bad. Remove from array
 			vkGlobals.physicalDeviceAll.erase(vkGlobals.physicalDeviceAll.begin() + i);
-			
+
 			//Decrement i
 			--i;
 
@@ -294,11 +300,12 @@ void PhysicalDeviceVerify() {
 
 		//Check #3B: Queue Family has GRAPHICS, PRESENT and COMPUTE
 		uint32_t flag_check = 0;
-		for (auto queue_fam : qfProperties) {
+		for (size_t j = 0; qfProperties.size(); ++j) {
+			VkQueueFamilyProperties queue_fam = qfProperties[j];
 			flag_check |= queue_fam.queueFlags & (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
 			if (queue_fam.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
 				VkBool32 presentSupport;
-				VkResult r = vkGetPhysicalDeviceSurfaceSupportKHR(current_device, i, vkGlobals.surface, &presentSupport);
+				VkResult r = vkGetPhysicalDeviceSurfaceSupportKHR(current_device, j, vkGlobals.surface, &presentSupport);
 				if (presentSupport)
 					flag_check |= 0x4;
 			}
@@ -316,6 +323,22 @@ void PhysicalDeviceVerify() {
 			continue;
 		}
 
+		//It Passes! Collect ALL the properties for the device
+		VkPhysicalDeviceFeatures feat;
+		VkPhysicalDeviceMemoryProperties device_memory_props;
+		VkPhysicalDeviceProperties device_props;
+
+		vkGlobals.physicalDeviceExtensionsAll[current_device] = devExt;
+		vkGlobals.physicalDeviceQueueFamilyPropertiesAll[current_device] = qfProperties;
+
+		vkGetPhysicalDeviceFeatures(current_device, &feat);
+		vkGlobals.physicalDeviceFeaturesAll[current_device] = feat;
+
+		vkGetPhysicalDeviceProperties(current_device, &device_props);
+		vkGlobals.physicalDevicePropertiesAll[current_device] = device_props;
+
+		vkGetPhysicalDeviceMemoryProperties(current_device, &device_memory_props);
+		vkGlobals.physicalDeviceMemoryPropertiesAll[current_device] = device_memory_props;
 	}
 }
 void GetBestPhysicalDevice() {
@@ -328,11 +351,11 @@ void GetBestPhysicalDevice() {
 
 	//Create a copy of the competitors
 	std::vector<VkPhysicalDevice> copyPDev = vkGlobals.physicalDeviceAll;
-	
+
 	//Find the Discrete ones
 	VkPhysicalDeviceProperties pDevProps;
-	for (auto physical_device = copyPDev.begin(); physical_device != copyPDev.end(); ++physical_device ) {
-		vkGetPhysicalDeviceProperties(*physical_device, &pDevProps);
+	for (auto physical_device = copyPDev.begin(); physical_device != copyPDev.end(); ++physical_device) {
+		pDevProps = vkGlobals.physicalDevicePropertiesAll[*physical_device];
 		if (pDevProps.deviceType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
 			--physical_device;
 			copyPDev.erase(physical_device + 1);
@@ -356,5 +379,56 @@ void GetBestPhysicalDevice() {
 	//vkGetPhysicalDeviceImageFormatProperties
 	//vkGetPhysicalDeviceProperties
 	//vkGetPhysicalDeviceQueueFamilyProperties
-	//vkGetPhysicalDeviceMemoryProperties.
+	//vkGetPhysicalDeviceMemoryProperties
+}
+void SetQueueFamilyIndices(const VkQueueFlags& _priority1, const VkQueueFlags& _priority2, const VkQueueFlags& _priority3, const VkQueueFlags& _priority4, uint8_t& _index) {
+	//Setup Physical Device Family Queue Properties
+	auto queue_families = vkGlobals.physicalDeviceQueueFamilyPropertiesAll[vkGlobals.physicalDevice];
+
+	//Find Best for Transfer Queue
+	uint16_t score = 0;
+	VkQueueFlags flags = VK_QUEUE_FLAG_BITS_MAX_ENUM;
+	for (uint32_t i = 0; i < queue_families.size(); ++i) {
+		VkQueueFamilyProperties current_property = queue_families[i];
+
+		//Priority 1 [Alone]
+		flags = _priority1;
+		if (!(current_property.queueFlags ^ flags)) {
+			_index = i;
+			break;
+		}
+
+		//Priority 1 + 2
+		flags |= _priority2;
+		if (!(current_property.queueFlags ^ flags)) {
+			if (score < 3) {
+				_index = i;
+				score = 3;
+			}
+		}
+
+		//Priority 1 + 2 + 3
+		flags |= _priority3;
+		if (!(current_property.queueFlags ^ flags)) {
+			if (score < 2) {
+				_index = i;
+				score = 2;
+			}
+		}
+
+		//Priority 1 + 2 + 3 + 4
+		flags |= _priority4;
+		if (!(current_property.queueFlags ^ flags)) {
+			if (score < 1) {
+				_index = i;
+				score = 1;
+			}
+		}
+	}
+}
+void GetQueueFamilyIndices() {
+	SetQueueFamilyIndices(VK_QUEUE_TRANSFER_BIT, VK_QUEUE_SPARSE_BINDING_BIT, VK_QUEUE_COMPUTE_BIT, VK_QUEUE_GRAPHICS_BIT, vkGlobals.TRANSFER_INDEX);
+	SetQueueFamilyIndices(VK_QUEUE_COMPUTE_BIT, VK_QUEUE_SPARSE_BINDING_BIT, VK_QUEUE_TRANSFER_BIT, VK_QUEUE_GRAPHICS_BIT, vkGlobals.COMPUTE_INDEX);
+	SetQueueFamilyIndices(VK_QUEUE_GRAPHICS_BIT, VK_QUEUE_SPARSE_BINDING_BIT, VK_QUEUE_TRANSFER_BIT, VK_QUEUE_COMPUTE_BIT, vkGlobals.GRAPHICS_INDEX);
+	SetQueueFamilyIndices(VK_QUEUE_GRAPHICS_BIT, VK_QUEUE_SPARSE_BINDING_BIT, VK_QUEUE_TRANSFER_BIT, VK_QUEUE_COMPUTE_BIT, vkGlobals.PRESENT_INDEX);
 }
