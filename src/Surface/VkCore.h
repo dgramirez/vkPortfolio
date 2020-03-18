@@ -1,6 +1,6 @@
 namespace VkCore {
 	//Initializing Vulkan
-	bool vkInit();
+	bool vkInit(const GW::SYSTEM::UNIVERSAL_WINDOW_HANDLE& uwh);
 
 	//Cleanup Vulkan
 	void vkCleanup();

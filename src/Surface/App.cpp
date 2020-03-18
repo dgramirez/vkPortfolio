@@ -30,6 +30,8 @@ namespace App {
 			return;
 		}
 		GWindow.SetWindowName("Derrick Ramirez's VkPortfolio");
+		GW::SYSTEM::UNIVERSAL_WINDOW_HANDLE uwh;
+		GWindow.GetWindowHandle(uwh);
 
 		//Setup the GWindow Receiver
 		if (-GWindowReceiver.Create(GWindow, [&]() { GWindowEvent(); }))
@@ -38,9 +40,8 @@ namespace App {
 			return;
 		}
 		
-
 		//Create Vulkan Core
-		VkCore::vkInit();
+		VkCore::vkInit(uwh);
 	}
 	
 	void Run() {

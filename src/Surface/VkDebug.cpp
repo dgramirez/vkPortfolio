@@ -41,28 +41,28 @@ namespace VkCore {
 	//Debug Cleanup 
 	//Cleanup
 	VkResult VkDebug::Cleanup() {
-//		//Check to see if this was allocated
-//		if (vkGlobals.debugReportCallback) {
-//			//Look for the pointer to where this extension's destroy is located
-//			PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT =
-//				reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT> (vkGetInstanceProcAddr(vkGlobals.instance, "vkDestroyDebugReportCallbackEXT"));
-//
-//			//Ensure the function was actually found
-//			if (vkDestroyDebugReportCallbackEXT) {
-//				//Destroy the Debug Callback
-//				vkDestroyDebugReportCallbackEXT(vkGlobals.instance, vkGlobals.debugReportCallback, VK_NULL_HANDLE);
-//
-//				//Set to NULL
-//				vkGlobals.debugReportCallback = {};
-//
-//				return VK_SUCCESS;
-//			}
-//
-//			//Not Found, Will need to investigate if reaches here
-//			return VK_ERROR_UNKNOWN;
-//		}
-//
-//		//Was never set, so need to do nothing
+		//Check to see if this was allocated
+		if (vkGlobals.debugReportCallback) {
+			//Look for the pointer to where this extension's destroy is located
+			PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT =
+				reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT> (vkGetInstanceProcAddr(vkGlobals.instance, "vkDestroyDebugReportCallbackEXT"));
+
+			//Ensure the function was actually found
+			if (vkDestroyDebugReportCallbackEXT) {
+				//Destroy the Debug Callback
+				vkDestroyDebugReportCallbackEXT(vkGlobals.instance, vkGlobals.debugReportCallback, VK_NULL_HANDLE);
+
+				//Set to NULL
+				vkGlobals.debugReportCallback = {};
+
+				return VK_SUCCESS;
+			}
+
+			//Not Found, Will need to investigate if reaches here
+			return VK_ERROR_UNKNOWN;
+		}
+
+		//Was never set, so need to do nothing
 		return VK_SUCCESS;
 	}
 	
