@@ -3,9 +3,10 @@ if (WIN32)
 	#Add all needed files from this directory and sub-directories
 	file(GLOB_RECURSE FILES_H *.h)
 	file(GLOB_RECURSE FILES_SRC *.cpp)
+	file(GLOB CONSOLECOLOR ../dep/consolecolors/*.c)
 
 	#Create the project as exe/binary
-	add_executable(vkPortfolio ${FILES_SRC} ${FILES_H})
+	add_executable(vkPortfolio ${FILES_SRC} ${FILES_H} ${CONSOLECOLOR})
 	target_include_directories(vkPortfolio PUBLIC $ENV{VULKAN_SDK}/Include/)
 	target_link_directories(vkPortfolio PUBLIC $ENV{VULKAN_SDK}/Lib/)
 	target_link_libraries(vkPortfolio PUBLIC "vulkan-1.lib")
@@ -28,9 +29,10 @@ if (UNIX AND NOT APPLE)
 	#Add all needed files from this directory and sub-directories
 	file(GLOB_RECURSE FILES_H *.h)
 	file(GLOB_RECURSE FILES_SRC *.cpp)
+	file(GLOB CONSOLECOLOR ../dep/consolecolors/*.c)
 
 	#Create the project as exe/binary
-	add_executable(vkPortfolio ${FILES_SRC} ${FILES_H})
+	add_executable(vkPortfolio ${FILES_SRC} ${FILES_H} ${CONSOLECOLOR})
 endif(UNIX AND NOT APPLE)
 
 if (APPLE)

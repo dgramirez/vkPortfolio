@@ -1,6 +1,13 @@
 //NO MINMAX WINDOWS >=O
 #define NOMINMAX
 
+//Console Color
+#ifdef _DEBUG
+#include "../dep/consolecolors/concolors.h"
+#endif 
+
+//C++ Headers Only!
+#ifdef __cplusplus
 //(My) SSE Math Library
 #include "../dep/sse_math/ssemath.h"
 
@@ -25,3 +32,4 @@
 #define GATEWARE_ENABLE_SYSTEM
 #define GATEWARE_ENABLE_INPUT
 #include "../dep/Gateware/Gateware.h"
+#endif
