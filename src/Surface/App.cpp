@@ -1,10 +1,12 @@
+#include "../VkGlobals.h"
+#include "VkCore.h"
 #include <chrono>
 
 namespace {
 	//Initialization - Window
 	GW::SYSTEM::GWindow GWindow;
-	void GetResolution(uint32_t& _x, uint32_t& _y);
-	void GetScreenSize(uint32_t& _x, uint32_t& _y, uint32_t& _w, uint32_t& _h);
+	GW::CORE::GEventReceiver GWindowReceiver;
+
 	
 	//Initialization - Input
 	GW::INPUT::GInput GInput;
@@ -12,20 +14,33 @@ namespace {
 	bool isRunnable = true;
 }
 
+void GetResolution(uint32_t& _x, uint32_t& _y);
+void GetScreenSize(uint32_t& _x, uint32_t& _y, uint32_t& _w, uint32_t& _h);
+void GWindowEvent();
+
 namespace App {
 
 	void Init() {
 		//Create the Window Surface
 		uint32_t x, y, w, h;
-		::GetResolution(x, y);
-		::GetScreenSize(x, y, w, h);
-		if (-GWindow.Create(x, y, w, h, GW::SYSTEM::GWindowStyle::WINDOWEDBORDERED))
-		{
+		GetResolution(x, y);
+		GetScreenSize(x, y, w, h);
+		if (-GWindow.Create(x, y, w, h, GW::SYSTEM::GWindowStyle::WINDOWEDBORDERED)) {
 			isRunnable = false;
 			return;
 		}
 		GWindow.SetWindowName("Derrick Ramirez's VkPortfolio");
 
+		//Setup the GWindow Receiver
+		if (-GWindowReceiver.Create(GWindow, [&]() { GWindowEvent(); }))
+		{
+			isRunnable = false;
+			return;
+		}
+		
+
+		//Create Vulkan Core
+		VkCore::vkInit();
 	}
 	
 	void Run() {
@@ -76,12 +91,11 @@ namespace App {
 	}
 
 	void Cleanup() {
-
 		GWindow = nullptr;
 	}
 }
 
-void ::GetResolution(uint32_t& _x, uint32_t& _y) {
+void GetResolution(uint32_t& _x, uint32_t& _y) {
 #ifdef _WIN32
 	RECT MyWindow;
 	HWND dWin = GetDesktopWindow();
@@ -93,8 +107,7 @@ void ::GetResolution(uint32_t& _x, uint32_t& _y) {
 	_y = 0;
 #endif
 }
-
-void ::GetScreenSize(uint32_t& _x, uint32_t& _y, uint32_t& _w, uint32_t& _h) {
+void GetScreenSize(uint32_t& _x, uint32_t& _y, uint32_t& _w, uint32_t& _h) {
 	//Get the Middle Point.
 	int32_t new_x = static_cast<int32_t>(_x >> 1);
 	int32_t new_y = static_cast<int32_t>(_y >> 1);
@@ -112,4 +125,26 @@ void ::GetScreenSize(uint32_t& _x, uint32_t& _y, uint32_t& _w, uint32_t& _h) {
 	_h = (_h > _y) ? _y : _h;
 	_x = (new_x < 0) ? 0 : new_x;
 	_y = (new_y < 0) ? 0 : new_y;
+}
+void GWindowEvent() {
+	//GEvent Setup [Getting Events]
+	GW::GEvent gEvent;
+	GWindowReceiver.Pop(gEvent);
+
+	//Reading GWindow's Events & Data 
+	GW::SYSTEM::GWindow::Events winEvent;
+	GW::SYSTEM::GWindow::EVENT_DATA winEventData;
+	gEvent.Read(winEvent, winEventData);
+
+	switch (winEvent) {
+	case GW::SYSTEM::GWindow::Events::DESTROY:
+//		CurrentScene.Cleanup();
+		VkCore::vkCleanup();
+
+		break;
+	case GW::SYSTEM::GWindow::Events::DISPLAY_CLOSED:
+		//Destroy Instance
+		if (vkGlobals.instance) { vkDestroyInstance(vkGlobals.instance, nullptr); vkGlobals.instance = {}; }
+		break;
+	}
 }
