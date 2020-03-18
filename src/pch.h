@@ -8,6 +8,9 @@
 
 //C++ Headers Only!
 #ifdef __cplusplus
+//Unordered Maps
+#include <unordered_map>
+
 //(My) SSE Math Library
 #include "../dep/sse_math/ssemath.h"
 
