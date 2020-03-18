@@ -7,10 +7,10 @@ struct VkGlobalObject {
 	VkDevice device = {};
 
 	//Queue Family Info
-	uint8_t GRAPHICS_INDEX = 0; VkQueue queueGraphics = {};
-	uint8_t PRESENT_INDEX = 0;  VkQueue queuePresent = {};
-	uint8_t COMPUTE_INDEX = 0;  VkQueue queueCompute = {};
-	uint8_t TRANSFER_INDEX = 0; VkQueue queueTransfer = {};
+	uint16_t GRAPHICS_INDEX = 0; VkQueue queueGraphics = {};
+	uint16_t PRESENT_INDEX = 0;  VkQueue queuePresent = {};
+	uint16_t COMPUTE_INDEX = 0;  VkQueue queueCompute = {};
+	uint16_t TRANSFER_INDEX = 0; VkQueue queueTransfer = {};
 
 	//Vulkan Debug Objects
 	VkDebugReportCallbackEXT debugReportCallback = {};
@@ -18,6 +18,7 @@ struct VkGlobalObject {
 	//Vulkan Properties 
 	std::vector<const char*> instanceExtensionsActive;
 	std::vector<const char*> instanceLayersActive;
+	std::vector<const char*> deviceExtensionsActive;
 	std::vector<VkExtensionProperties> instanceExtensionsAll;
 	std::vector<VkLayerProperties> instanceLayersAll;
 	std::vector<VkPhysicalDevice> physicalDeviceAll;

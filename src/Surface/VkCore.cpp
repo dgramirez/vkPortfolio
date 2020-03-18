@@ -15,6 +15,7 @@ VkResult VulkanPrereq();
 VkResult SetupInstance();
 VkResult SetupSurface(const GW::SYSTEM::UNIVERSAL_WINDOW_HANDLE & uwh);
 VkResult SetupPhysicalDevice();
+VkResult SetupLogicalDevice();
 
 //Prototype (Destruction)
 VkResult DestroyInstance();
@@ -23,7 +24,6 @@ VkResult DestroyInstance();
 const char* GetPlatformSurfaceName();
 void PhysicalDeviceVerify();
 void GetBestPhysicalDevice();
-void SetQueueFamilyIndex();
 void GetQueueFamilyIndices();
 
 namespace VkCore {
@@ -44,7 +44,7 @@ namespace VkCore {
 		VK_FAIL(SetupPhysicalDevice());
 
 		//5: Setup Logical Device
-		//	dExt.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+		VK_FAIL(SetupLogicalDevice());
 
 		//6: Setup VMA Allocator
 
@@ -85,6 +85,9 @@ VkResult VulkanPrereq() {
 	//Add the needed extensions to the vector
 	iExt.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 	iExt.push_back(GetPlatformSurfaceName());
+
+	//Add needed (but verified later) extensions to the vector, due to lack of physical device
+	vkGlobals.deviceExtensionsActive.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
 	/////////////////////////////////////////////////
 	// Add Any Additional Extensions & Layers Here //
@@ -214,6 +217,77 @@ VkResult SetupPhysicalDevice() {
 
 	//Get the best Queue Family Indices Set up
 	GetQueueFamilyIndices();
+
+	return VK_SUCCESS;
+}
+VkResult SetupLogicalDevice() {
+	//Setup Size for Create Info
+	std::vector<uint16_t> qfi;
+	
+	qfi.push_back(vkGlobals.GRAPHICS_INDEX);
+	if (vkGlobals.GRAPHICS_INDEX != vkGlobals.PRESENT_INDEX)
+		qfi.push_back(vkGlobals.PRESENT_INDEX);
+
+	if (vkGlobals.PRESENT_INDEX != vkGlobals.COMPUTE_INDEX)
+		qfi.push_back(vkGlobals.COMPUTE_INDEX);
+
+	if (vkGlobals.COMPUTE_INDEX != vkGlobals.TRANSFER_INDEX)
+		qfi.push_back(vkGlobals.TRANSFER_INDEX);
+
+	//Setup Create Infos
+	std::vector<VkDeviceQueueCreateInfo> QueueCreateInfo;
+	QueueCreateInfo.resize(qfi.size());
+
+	//Set up Create Info for all unique queue families
+	float priority = 1.0f;
+	for (uint32_t i = 0; i < qfi.size(); ++i)
+	{
+		VkDeviceQueueCreateInfo create_info = {};
+
+		create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		create_info.queueFamilyIndex = qfi[i];
+		create_info.queueCount = 1;
+		create_info.pQueuePriorities = &priority;
+		QueueCreateInfo[i] = create_info;
+	}
+
+	//Verify Device Extensions are good
+	bool success = false;
+	for (auto extension : vkGlobals.deviceExtensionsActive) {
+		success = false;
+		for (auto all_extensions : vkGlobals.physicalDeviceExtensionsAll[vkGlobals.physicalDevice]) {
+			if (!strcmp(extension, all_extensions.extensionName)) {
+				success = true;
+				break;
+			}
+		}
+		if (!success) {
+			VK_ASSERT(true);
+			return VK_ERROR_EXTENSION_NOT_PRESENT;
+		}
+	}
+
+	//Setup Logical device create info
+	VkDeviceCreateInfo create_info = {};
+	create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	create_info.pQueueCreateInfos = QueueCreateInfo.data();
+	create_info.queueCreateInfoCount = QueueCreateInfo.size();
+	create_info.pEnabledFeatures = &vkGlobals.physicalDeviceFeaturesAll[vkGlobals.physicalDevice];
+
+	create_info.enabledExtensionCount = vkGlobals.deviceExtensionsActive.size();
+	create_info.ppEnabledExtensionNames = vkGlobals.deviceExtensionsActive.data();
+
+	//Create the Surface (With Results) [VK_SUCCESS = 0]
+	VkResult r = vkCreateDevice(vkGlobals.physicalDevice, &create_info, VK_NULL_HANDLE, &vkGlobals.device);
+
+	//If Device has been created, Setup the Device Queue for graphics and present family
+	vkGetDeviceQueue(vkGlobals.device, vkGlobals.GRAPHICS_INDEX, 0, &vkGlobals.queueGraphics);
+	vkGetDeviceQueue(vkGlobals.device, vkGlobals.PRESENT_INDEX , 0, &vkGlobals.queuePresent);
+	vkGetDeviceQueue(vkGlobals.device, vkGlobals.COMPUTE_INDEX , 0, &vkGlobals.queueCompute);
+	vkGetDeviceQueue(vkGlobals.device, vkGlobals.TRANSFER_INDEX, 0, &vkGlobals.queueTransfer);
+
+	//Device has been created successfully!
+	return r;
 
 	return VK_SUCCESS;
 }
@@ -381,7 +455,7 @@ void GetBestPhysicalDevice() {
 	//vkGetPhysicalDeviceQueueFamilyProperties
 	//vkGetPhysicalDeviceMemoryProperties
 }
-void SetQueueFamilyIndices(const VkQueueFlags& _priority1, const VkQueueFlags& _priority2, const VkQueueFlags& _priority3, const VkQueueFlags& _priority4, uint8_t& _index) {
+void SetQueueFamilyIndices(const VkQueueFlags& _priority1, const VkQueueFlags& _priority2, const VkQueueFlags& _priority3, const VkQueueFlags& _priority4, uint16_t& _index) {
 	//Setup Physical Device Family Queue Properties
 	auto queue_families = vkGlobals.physicalDeviceQueueFamilyPropertiesAll[vkGlobals.physicalDevice];
 
