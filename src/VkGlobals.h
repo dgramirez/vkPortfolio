@@ -39,6 +39,7 @@ extern VkGlobalObject vkGlobals;
 	#if defined(_WIN32)
 		#define VK_ASSERT(truth) if (truth) __debugbreak()
 	#elif defined(__linux__)
+		#include <signal.h>
 		#define VK_ASSERT(truth) if (truth) raise(SIGTRAP);
 	#endif
 
