@@ -5,6 +5,7 @@ struct VkGlobalObject {
 	VkSurfaceKHR surface = {};
 	VkPhysicalDevice physicalDevice = {};
 	VkDevice device = {};
+	VmaAllocator allocator = {};
 
 	//Queue Family Info
 	uint16_t GRAPHICS_INDEX = 0; VkQueue queueGraphics = {};
@@ -27,6 +28,7 @@ struct VkGlobalObject {
 	std::unordered_map<VkPhysicalDevice, VkPhysicalDeviceFeatures> physicalDeviceFeaturesAll;
 	std::unordered_map<VkPhysicalDevice, VkPhysicalDeviceProperties> physicalDevicePropertiesAll;
 	std::unordered_map<VkPhysicalDevice, VkPhysicalDeviceMemoryProperties> physicalDeviceMemoryPropertiesAll;
+	VkSurfaceCapabilitiesKHR SurfaceCapabilities;
 };
 
 extern VkGlobalObject vkGlobals;

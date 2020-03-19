@@ -13,9 +13,10 @@ VkGlobalObject vkGlobals;
 //Prototype (Creation)
 VkResult VulkanPrereq();
 VkResult SetupInstance();
-VkResult SetupSurface(const GW::SYSTEM::UNIVERSAL_WINDOW_HANDLE & uwh);
+VkResult SetupSurface(const GW::SYSTEM::UNIVERSAL_WINDOW_HANDLE& uwh);
 VkResult SetupPhysicalDevice();
 VkResult SetupLogicalDevice();
+VkResult SetupVMAAllocator();
 
 //Prototype (Destruction)
 VkResult DestroyInstance();
@@ -47,13 +48,18 @@ namespace VkCore {
 		VK_FAIL(SetupLogicalDevice());
 
 		//6: Setup VMA Allocator
+		VK_FAIL(SetupVMAAllocator());
 
-		//7: Query Swapchain Properties
-
-		//8: Return True (Initialized Successfully)
+		//7: Return True (Initialized Successfully)
 		return true;
 	}
 	void vkCleanup() {
+		//Cleanup VMA Allocator
+		if (vkGlobals.allocator) vmaDestroyAllocator(vkGlobals.allocator);
+
+		//Cleanup Device
+		if (vkGlobals.device) vkDestroyDevice(vkGlobals.device, nullptr);
+
 		//Destroy Surface
 		if (vkGlobals.surface) { vkDestroySurfaceKHR(vkGlobals.instance, vkGlobals.surface, nullptr); vkGlobals.surface = {}; }
 
@@ -223,7 +229,7 @@ VkResult SetupPhysicalDevice() {
 VkResult SetupLogicalDevice() {
 	//Setup Size for Create Info
 	std::vector<uint16_t> qfi;
-	
+
 	qfi.push_back(vkGlobals.GRAPHICS_INDEX);
 	if (vkGlobals.GRAPHICS_INDEX != vkGlobals.PRESENT_INDEX)
 		qfi.push_back(vkGlobals.PRESENT_INDEX);
@@ -282,14 +288,21 @@ VkResult SetupLogicalDevice() {
 
 	//If Device has been created, Setup the Device Queue for graphics and present family
 	vkGetDeviceQueue(vkGlobals.device, vkGlobals.GRAPHICS_INDEX, 0, &vkGlobals.queueGraphics);
-	vkGetDeviceQueue(vkGlobals.device, vkGlobals.PRESENT_INDEX , 0, &vkGlobals.queuePresent);
-	vkGetDeviceQueue(vkGlobals.device, vkGlobals.COMPUTE_INDEX , 0, &vkGlobals.queueCompute);
+	vkGetDeviceQueue(vkGlobals.device, vkGlobals.PRESENT_INDEX, 0, &vkGlobals.queuePresent);
+	vkGetDeviceQueue(vkGlobals.device, vkGlobals.COMPUTE_INDEX, 0, &vkGlobals.queueCompute);
 	vkGetDeviceQueue(vkGlobals.device, vkGlobals.TRANSFER_INDEX, 0, &vkGlobals.queueTransfer);
 
 	//Device has been created successfully!
 	return r;
 
 	return VK_SUCCESS;
+}
+VkResult SetupVMAAllocator() {
+	VmaAllocatorCreateInfo allocatorInfo = {};
+	allocatorInfo.physicalDevice = vkGlobals.physicalDevice;
+	allocatorInfo.device = vkGlobals.device;
+
+	return vmaCreateAllocator(&allocatorInfo, &vkGlobals.allocator);
 }
 
 //Definitions (Destruction)
