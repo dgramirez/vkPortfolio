@@ -5,7 +5,7 @@
 
 #if defined(_WIN32)
 #include "vulkan/vulkan_win32.h"
-#else if defined(__linux__)
+#elif defined(__linux__)
 #include "vulkan/vulkan_xlib.h"
 #endif
 VkGlobalObject vkGlobals;
@@ -175,7 +175,7 @@ VkResult SetupSurface(const GW::SYSTEM::UNIVERSAL_WINDOW_HANDLE& uwh) {
 	VkResult r = vkCreateWin32SurfaceKHR(vkGlobals.instance, &create_info, VK_NULL_HANDLE, &vkGlobals.surface);
 	VK_ASSERT(r);
 	return r;
-#else if defined(__linux__)
+#elif defined(__linux__)
 	//Setup Window and Display
 	Window wnd = *(static_cast<Window*>(uwh.window));
 	Display* dpy = static_cast<Display*>(uwh.display);
