@@ -104,8 +104,11 @@ void GetResolution(uint32_t& _x, uint32_t& _y) {
 	_x = MyWindow.right;
 	_y = MyWindow.bottom;
 #else
-	_x = 0;
-	_y = 0;
+	Display* d = XOpenDisplay(NULL);
+	Screen*  s = DefaultScreenOfDisplay(d);
+	_x = s->width;
+	_y = s->height;
+	XCloseDisplay(d);
 #endif
 }
 void GetScreenSize(uint32_t& _x, uint32_t& _y, uint32_t& _w, uint32_t& _h) {
