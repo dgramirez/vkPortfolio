@@ -7,6 +7,7 @@ struct VkGlobalObject {
 	VkDevice device = {};
 	VmaAllocator allocator = {};
 	VkSwapchainKHR swapchain = {};
+	VkSampleCountFlagBits msaa = VK_SAMPLE_COUNT_1_BIT;
 
 	//Queue Family Info
 	uint16_t GRAPHICS_INDEX = 0; VkQueue queueGraphics = {};
@@ -36,10 +37,13 @@ struct VkGlobalObject {
 	std::unordered_map<VkPhysicalDevice, VkPhysicalDeviceMemoryProperties> physicalDeviceMemoryPropertiesAll;
 
 	//Vulkan Surface Properties
-	VkSurfaceCapabilitiesKHR surfaceCapabilities;
+	VkSurfaceCapabilitiesKHR surfaceCapabilities = {};
 	std::vector<VkSurfaceFormatKHR> surfaceFormatsAll;
 	std::vector<VkPresentModeKHR> surfacePresentModesAll;
-};
+
+	static VkResult CreateImage(const VkFormat& _format, const VkExtent3D& _imageExtent, const VkSampleCountFlagBits& _samples, const VkImageTiling& _tiling, const VkImageUsageFlags& _usageFlags, const VkMemoryPropertyFlags& _memoryPropertyFlags, VkImage* _outImage, VkDeviceMemory* _outImageMemory);
+	static VkResult CreateImageView(const VkImage& _image, const VkFormat& _format, const VkImageAspectFlags& _imageAspectFlags, VkImageView* _outImageView);
+	};
 
 extern VkGlobalObject vkGlobals;
 
