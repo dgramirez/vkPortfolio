@@ -55,13 +55,22 @@ namespace VkCore {
 	}
 	void vkCleanup() {
 		//Cleanup VMA Allocator
-		if (vkGlobals.allocator) vmaDestroyAllocator(vkGlobals.allocator);
+		if (vkGlobals.allocator) {
+			vmaDestroyAllocator(vkGlobals.allocator); 
+			vkGlobals.allocator = {};
+		}
 
 		//Cleanup Device
-		if (vkGlobals.device) vkDestroyDevice(vkGlobals.device, nullptr);
+		if (vkGlobals.device) {
+			vkDestroyDevice(vkGlobals.device, nullptr);
+			vkGlobals.device = {};
+		}
 
 		//Destroy Surface
-		if (vkGlobals.surface) { vkDestroySurfaceKHR(vkGlobals.instance, vkGlobals.surface, nullptr); vkGlobals.surface = {}; }
+		if (vkGlobals.surface) { 
+			vkDestroySurfaceKHR(vkGlobals.instance, vkGlobals.surface, nullptr);
+			vkGlobals.surface = {};
+		}
 
 		//Destroy Callback
 		VkDebug::Cleanup();

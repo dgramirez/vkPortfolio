@@ -94,12 +94,14 @@ namespace App {
 				ratio = accumulator / dt;
 
 				//Render
-				printf("%f\n", accumulator);
+				CurrentScene->Render(ratio);
 			}
 		}
 	}
 
 	void Cleanup() {
+		delete[] Menu;
+		delete[] CurrentScene;
 		GWindow = nullptr;
 	}
 }
@@ -150,7 +152,7 @@ void GWindowEvent() {
 
 	switch (winEvent) {
 	case GW::SYSTEM::GWindow::Events::DESTROY:
-		delete Menu;
+		CurrentScene->Cleanup();
 		VkCore::vkCleanup();
 
 		break;

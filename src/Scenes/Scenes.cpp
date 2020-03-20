@@ -341,6 +341,126 @@ StartScene::StartScene() {
 	Initialize();
 }
 StartScene::~StartScene() {
+	Cleanup();
+}
+
+void StartScene::Render(const float& _dtRatio) {
+	if (canRender)
+	{
+		//Wait for Queue to be ready
+		vkWaitForFences(vkGlobals.device, 1, &sceneFence[frameCurrent], VK_TRUE, ~(static_cast<uint64_t>(0)));
+
+		//Get the Frame Result
+		VkResult frame_result = vkAcquireNextImageKHR(vkGlobals.device, swapchain, ~(0ull), sceneSemaphoreIA[frameCurrent], VK_NULL_HANDLE, &frameCurrent);
+
+		//Create the Command Buffer's Begin Info
+		VkCommandBufferBeginInfo command_buffer_begin_info = {};
+		command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		command_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+		command_buffer_begin_info.pInheritanceInfo = nullptr;
+		vkBeginCommandBuffer(commandBuffer[frameCurrent], &command_buffer_begin_info);
+
+		//Setup Clear Color
+		VkClearValue clear_value = { 0.098f, .098f, .439f, 1.0f };
+
+		//Setup the Render Pass
+		VkRenderPassBeginInfo render_pass_begin_info = {};
+		render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		render_pass_begin_info.renderPass = renderPass;
+		render_pass_begin_info.framebuffer = swapchainFramebuffer[frameCurrent];
+		render_pass_begin_info.renderArea.extent = surfaceExtent2D;
+		render_pass_begin_info.clearValueCount = 1;
+		render_pass_begin_info.pClearValues = &clear_value;
+
+		//Begin the Render Pass
+		vkCmdBeginRenderPass(commandBuffer[frameCurrent], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+
+		//Stop the Render Pass
+		vkCmdEndRenderPass(commandBuffer[frameCurrent]);
+		vkEndCommandBuffer(commandBuffer[frameCurrent]);
+
+		//Setup the Semaphores and Command Buffer to be sent into Queue Submit
+		VkSemaphore wait_semaphores[] = { sceneSemaphoreIA[frameCurrent] };
+		VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+		VkSemaphore signal_semaphore[] = { sceneSemaphoreRF[frameCurrent] };
+		VkCommandBuffer pCommandBuffer[] = { commandBuffer[frameCurrent] };
+
+		//Setup the Queue Submit Info
+		VkSubmitInfo submit_info = {};
+		submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submit_info.waitSemaphoreCount = 1;
+		submit_info.pWaitSemaphores = wait_semaphores;
+		submit_info.pWaitDstStageMask = wait_stages;
+		submit_info.commandBufferCount = 1;
+		submit_info.pCommandBuffers = pCommandBuffer;
+		submit_info.signalSemaphoreCount = 1;
+		submit_info.pSignalSemaphores = signal_semaphore;
+
+		//Reset the Fence
+		vkResetFences(vkGlobals.device, 1, &sceneFence[frameCurrent]);
+
+		//Submit Queue <--Something to come back to.
+		VkResult r;
+		r = vkQueueSubmit(vkGlobals.queueGraphics, 1, &submit_info, sceneFence[frameCurrent]);
+		if (r) {
+			VK_ASSERT(r);
+		}
+
+		//Setup the Present Info
+		VkSwapchainKHR swapchains[] = { swapchain };
+		VkPresentInfoKHR present_info = {};
+		present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		present_info.waitSemaphoreCount = 1;
+		present_info.pWaitSemaphores = signal_semaphore;
+		present_info.swapchainCount = 1;
+		present_info.pSwapchains = swapchains;
+		present_info.pImageIndices = &frameCurrent;
+		present_info.pResults = nullptr;
+
+		//Present onto the surface
+		frame_result = vkQueuePresentKHR(vkGlobals.queuePresent, &present_info);
+
+		//Error Check for Swapchain and VSync Changes
+		if (frame_result == VK_ERROR_OUT_OF_DATE_KHR || frame_result == VK_SUBOPTIMAL_KHR) {
+			VK_ASSERT(frame_result);
+		}
+		else if (frame_result) {
+			VK_ASSERT(frame_result);
+		}
+
+		//Go to the next frame
+		frameCurrent = (frameCurrent + 1) % frameMax;
+	}
+}
+
+void StartScene::Initialize() {
+	//1: Update the Surface Information based on current configurations
+	UpdateSurfaceData();
+
+	//2: Setup Default Parameters
+	surfaceCapabilities = vkGlobals.surfaceCapabilities;
+	surfacePresentMode = VK_PRESENT_MODE_FIFO_KHR; //Default
+	surfaceExtent2D = surfaceCapabilities.currentExtent;
+	surfaceExtent3D = { surfaceExtent2D.width, surfaceExtent2D.height, 1 };
+	surfaceFormat.format = VK_FORMAT_B8G8R8A8_UNORM;
+	surfaceFormat.colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+	frameMax = 2;
+
+	//3: Create Swapchain, Renderpass & Framebuffers
+	CreateSwapchainPresetBasic();
+
+	//4: Create Command Pool & Buffers
+	CreateCommandPreset();
+
+	//5: Create Semaphores and Fences
+	CreateSyncPreset();
+}
+
+void StartScene::Cleanup() {
+	//Wait for device
+	if (vkGlobals.device)
+		vkDeviceWaitIdle(vkGlobals.device);
+
 	//Remove Fence
 	if (sceneFence.size()) {
 		for (auto fence : sceneFence) {
@@ -408,32 +528,6 @@ StartScene::~StartScene() {
 		swapchainImage.clear();
 		swapchainImage.shrink_to_fit();
 	}
-}
 
-void StartScene::Render(const float& _dtRatio)
-{
-
-}
-
-void StartScene::Initialize() {
-	//1: Update the Surface Information based on current configurations
-	UpdateSurfaceData();
-
-	//2: Setup Default Parameters
-	surfaceCapabilities = vkGlobals.surfaceCapabilities;
-	surfacePresentMode = VK_PRESENT_MODE_FIFO_KHR; //Default
-	surfaceExtent2D = surfaceCapabilities.currentExtent;
-	surfaceExtent3D = { surfaceExtent2D.width, surfaceExtent2D.height, 1 };
-	surfaceFormat.format = VK_FORMAT_B8G8R8A8_UNORM;
-	surfaceFormat.colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
-	frameMax = 2;
-
-	//3: Create Swapchain, Renderpass & Framebuffers
-	CreateSwapchainPresetBasic();
-
-	//4: Create Command Pool & Buffers
-	CreateCommandPreset();
-
-	//5: Create Semaphores and Fences
-	CreateSyncPreset();
+	canRender = false;
 }

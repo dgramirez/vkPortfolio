@@ -10,6 +10,8 @@ public:
 	virtual void Render(const float& _dtRatio) {}
 	virtual void RenderImGui() {}
 
+	virtual void Cleanup() {}
+
 	static VkResult UpdateSurfaceData();
 
 protected:
@@ -50,7 +52,7 @@ private:
 class SceneMenu : public Scene {
 public:
 	SceneMenu(Scene*& _pScene);
-	~SceneMenu() { delete m_CurrentScene; }
+	~SceneMenu() {}
 
 	void RenderImGui() override;
 	template<typename T>
@@ -72,6 +74,9 @@ public:
 
 	virtual void RenderImGui() {}
 	void Initialize();
+	void Cleanup() override;
+private:
+	bool canRender = true;
 };
 
 #endif
