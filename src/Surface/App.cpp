@@ -100,8 +100,8 @@ namespace App {
 	}
 
 	void Cleanup() {
-		delete[] Menu;
-		delete[] CurrentScene;
+		delete Menu;
+		delete CurrentScene;
 		GWindow = nullptr;
 	}
 }
