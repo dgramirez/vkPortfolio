@@ -1,4 +1,5 @@
 #include "../VkGlobals.h"
+#include "../Scenes/Scenes.h"
 #include "VkCore.h"
 #include <chrono>
 
@@ -6,8 +7,11 @@ namespace {
 	//Initialization - Window
 	GW::SYSTEM::GWindow GWindow;
 	GW::CORE::GEventReceiver GWindowReceiver;
-
 	
+	//Initialization - Scenes
+	SceneMenu* Menu = nullptr;
+	Scene* Start = nullptr;
+
 	//Initialization - Input
 	GW::INPUT::GInput GInput;
 
