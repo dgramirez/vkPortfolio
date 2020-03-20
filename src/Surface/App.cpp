@@ -10,7 +10,7 @@ namespace {
 	
 	//Initialization - Scenes
 	SceneMenu* Menu = nullptr;
-	Scene* Start = nullptr;
+	Scene* CurrentScene = nullptr;
 
 	//Initialization - Input
 	GW::INPUT::GInput GInput;
@@ -51,6 +51,10 @@ namespace App {
 	void Run() {
 		//Ensure that its runnable
 		if (isRunnable) {
+			//Setup Menus
+			CurrentScene = new StartScene();
+			Menu = new SceneMenu(CurrentScene);
+
 			//Setup Time
 			double t = 0.0;
 			const double dt = 1.0/60.0;
@@ -146,7 +150,7 @@ void GWindowEvent() {
 
 	switch (winEvent) {
 	case GW::SYSTEM::GWindow::Events::DESTROY:
-//		CurrentScene.Cleanup();
+		delete Menu;
 		VkCore::vkCleanup();
 
 		break;
