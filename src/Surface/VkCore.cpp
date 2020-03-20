@@ -110,7 +110,7 @@ VkResult VulkanPrereq() {
 		if (count == iExt.size()) break;
 	}
 	if (count < iExt.size()) {
-		VK_ASSERT(true);
+		VK_ASSERT(VK_ERROR_EXTENSION_NOT_PRESENT);
 		return VK_ERROR_EXTENSION_NOT_PRESENT;
 	}
 
@@ -123,7 +123,7 @@ VkResult VulkanPrereq() {
 		if (count == iExt.size()) break;
 	}
 	if (count < iLyr.size()) {
-		VK_ASSERT(true);
+		VK_ASSERT(VK_ERROR_LAYER_NOT_PRESENT);
 		return VK_ERROR_LAYER_NOT_PRESENT;
 	}
 
@@ -191,7 +191,7 @@ VkResult SetupSurface(const GW::SYSTEM::UNIVERSAL_WINDOW_HANDLE& uwh) {
 	VK_ASSERT(r);
 	return r;
 #endif
-	VK_ASSERT(true);
+	VK_ASSERT(VK_ERROR_NOT_PERMITTED_EXT);
 	return VK_ERROR_NOT_PERMITTED_EXT;
 }
 VkResult SetupPhysicalDevice() {
@@ -199,7 +199,7 @@ VkResult SetupPhysicalDevice() {
 	uint32_t device_count;
 	vkEnumeratePhysicalDevices(vkGlobals.instance, &device_count, VK_NULL_HANDLE);
 	if (device_count < 1) {
-		VK_ASSERT(true);
+		VK_ASSERT(VK_ERROR_NOT_PERMITTED_EXT);
 		return VK_ERROR_NOT_PERMITTED_EXT;
 	}
 
@@ -209,7 +209,7 @@ VkResult SetupPhysicalDevice() {
 	//Verify Each Physical Devices Requirements
 	PhysicalDeviceVerify();
 	if (vkGlobals.physicalDeviceAll.size() < 1) {
-		VK_ASSERT(true);
+		VK_ASSERT(VK_ERROR_EXTENSION_NOT_PRESENT);
 		return VK_ERROR_EXTENSION_NOT_PRESENT;
 	}
 
@@ -228,30 +228,28 @@ VkResult SetupPhysicalDevice() {
 }
 VkResult SetupLogicalDevice() {
 	//Setup Size for Create Info
-	std::vector<uint16_t> qfi;
-
-	qfi.push_back(vkGlobals.GRAPHICS_INDEX);
+	vkGlobals.uniqueIndices.push_back(vkGlobals.GRAPHICS_INDEX);
 	if (vkGlobals.GRAPHICS_INDEX != vkGlobals.PRESENT_INDEX)
-		qfi.push_back(vkGlobals.PRESENT_INDEX);
+		vkGlobals.uniqueIndices.push_back(vkGlobals.PRESENT_INDEX);
 
 	if (vkGlobals.PRESENT_INDEX != vkGlobals.COMPUTE_INDEX)
-		qfi.push_back(vkGlobals.COMPUTE_INDEX);
+		vkGlobals.uniqueIndices.push_back(vkGlobals.COMPUTE_INDEX);
 
 	if (vkGlobals.COMPUTE_INDEX != vkGlobals.TRANSFER_INDEX)
-		qfi.push_back(vkGlobals.TRANSFER_INDEX);
+		vkGlobals.uniqueIndices.push_back(vkGlobals.TRANSFER_INDEX);
 
 	//Setup Create Infos
 	std::vector<VkDeviceQueueCreateInfo> QueueCreateInfo;
-	QueueCreateInfo.resize(qfi.size());
+	QueueCreateInfo.resize(vkGlobals.uniqueIndices.size());
 
 	//Set up Create Info for all unique queue families
 	float priority = 1.0f;
-	for (uint32_t i = 0; i < qfi.size(); ++i)
+	for (uint32_t i = 0; i < vkGlobals.uniqueIndices.size(); ++i)
 	{
 		VkDeviceQueueCreateInfo create_info = {};
 
 		create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		create_info.queueFamilyIndex = qfi[i];
+		create_info.queueFamilyIndex = vkGlobals.uniqueIndices[i];
 		create_info.queueCount = 1;
 		create_info.pQueuePriorities = &priority;
 		QueueCreateInfo[i] = create_info;
@@ -268,7 +266,7 @@ VkResult SetupLogicalDevice() {
 			}
 		}
 		if (!success) {
-			VK_ASSERT(true);
+			VK_ASSERT(VK_ERROR_EXTENSION_NOT_PRESENT);
 			return VK_ERROR_EXTENSION_NOT_PRESENT;
 		}
 	}
