@@ -95,6 +95,7 @@ namespace App {
 
 				//Render
 				CurrentScene->Render(ratio);
+				CurrentScene->RenderImGui();
 			}
 		}
 	}

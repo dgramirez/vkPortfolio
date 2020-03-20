@@ -71,12 +71,13 @@ public:
 	~StartScene();
 
 	void Render(const float& _dtRatio) override;
+	void RenderImGui() override;
 
-	virtual void RenderImGui() {}
 	void Initialize();
 	void Cleanup() override;
 private:
 	bool canRender = true;
+	bool yes = true;
 };
 
 #endif

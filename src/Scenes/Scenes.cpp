@@ -432,6 +432,12 @@ void StartScene::Render(const float& _dtRatio) {
 		frameCurrent = (frameCurrent + 1) % frameMax;
 	}
 }
+void StartScene::RenderImGui() {
+	//ImGui::Begin("Test Menu");
+	//ImGui::Checkbox("Show About Window", &yes);
+	//ImGui::ShowAboutWindow(&yes);
+	//ImGui::End();
+}
 
 void StartScene::Initialize() {
 	//1: Update the Surface Information based on current configurations
