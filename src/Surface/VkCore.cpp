@@ -8,7 +8,7 @@
 #elif defined(__linux__)
 #include "vulkan/vulkan_xlib.h"
 #endif
-VkGlobalObject vkGlobal;
+VkGlobal vkGlobal;
 
 //Prototype (Creation)
 VkResult VulkanPrereq();

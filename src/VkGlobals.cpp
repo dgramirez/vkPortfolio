@@ -1,6 +1,6 @@
 #include "vkGlobals.h"
 
-VkResult VkGlobalObject::CreateImage(const VkFormat& _format, const VkExtent3D& _imageExtent, const VkSampleCountFlagBits& _samples, const VkImageTiling& _tiling, const VkImageUsageFlags& _usageFlags, const VkMemoryPropertyFlags& _memoryPropertyFlags, VkImage* _outImage, VkDeviceMemory* _outImageMemory)
+VkResult VkGlobal::CreateImage(const VkFormat& _format, const VkExtent3D& _imageExtent, const VkSampleCountFlagBits& _samples, const VkImageTiling& _tiling, const VkImageUsageFlags& _usageFlags, const VkMemoryPropertyFlags& _memoryPropertyFlags, VkImage* _outImage, VkDeviceMemory* _outImageMemory)
 {
 	//Create image info
 	VkImageCreateInfo create_info = {};
@@ -63,7 +63,7 @@ VkResult VkGlobalObject::CreateImage(const VkFormat& _format, const VkExtent3D& 
 	//Image Creation has been successful!
 	return r;
 }
-VkResult VkGlobalObject::CreateImageView(const VkImage& _image, const VkFormat& _format, const VkImageAspectFlags& _imageAspectFlags, VkImageView* _outImageView)
+VkResult VkGlobal::CreateImageView(const VkImage& _image, const VkFormat& _format, const VkImageAspectFlags& _imageAspectFlags, VkImageView* _outImageView)
 {
 	//Image View Create Info
 	VkImageViewCreateInfo create_info = {};

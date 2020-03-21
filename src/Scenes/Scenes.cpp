@@ -124,7 +124,7 @@ VkResult Scene::CreateSwapchain() {
 	//Obtain the Image and Image Views
 	swapchainImageView.resize(frameMax);
 	for (uint32_t i = 0; i < frameMax; ++i) {
-		r = VkGlobalObject::CreateImageView(swapchainImage[i], surfaceFormat.format, VK_IMAGE_ASPECT_COLOR_BIT, &swapchainImageView[i]);
+		r = VkGlobal::CreateImageView(swapchainImage[i], surfaceFormat.format, VK_IMAGE_ASPECT_COLOR_BIT, &swapchainImageView[i]);
 		if (r) {
 			VK_ASSERT(r);
 			return r;

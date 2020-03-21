@@ -1,6 +1,6 @@
 #include "../dep/imgui/imgui_impl_vulkan.h"
 
-struct VkGlobalObject {
+struct VkGlobal {
 
 	//Vulkan Objects
 	VkInstance instance = {};
@@ -46,12 +46,12 @@ struct VkGlobalObject {
 	static VkResult CreateImage(const VkFormat& _format, const VkExtent3D& _imageExtent, const VkSampleCountFlagBits& _samples, const VkImageTiling& _tiling, const VkImageUsageFlags& _usageFlags, const VkMemoryPropertyFlags& _memoryPropertyFlags, VkImage* _outImage, VkDeviceMemory* _outImageMemory);
 	static VkResult CreateImageView(const VkImage& _image, const VkFormat& _format, const VkImageAspectFlags& _imageAspectFlags, VkImageView* _outImageView);
 	};
-extern VkGlobalObject vkGlobal;
+extern VkGlobal vkGlobal;
 
-struct ImGuiGlobalObject {
+struct ImGuiGlobal {
 	ImGui_ImplVulkan_InitInfo init_info = {};
 };
-extern ImGuiGlobalObject vkImGui;
+extern ImGuiGlobal vkImGui;
 
 //Defines for Windows
 #if defined(_DEBUG)
