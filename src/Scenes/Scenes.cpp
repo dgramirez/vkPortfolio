@@ -55,7 +55,7 @@ VkResult Scene::UpdateSurfaceData() {
 	//Resize Present Modes Vector and Put the contents in it.
 	vkGlobals.surfacePresentModesAll.resize(presentModeCount);
 	r = vkGetPhysicalDeviceSurfacePresentModesKHR(vkGlobals.physicalDevice, vkGlobals.surface, &presentModeCount, vkGlobals.surfacePresentModesAll.data());
-	if (r) { 
+	if (r) {
 		VK_ASSERT(r);
 	}
 
@@ -493,7 +493,6 @@ void StartScene::Cleanup() {
 		sceneSemaphoreIA.clear();
 		sceneSemaphoreIA.shrink_to_fit();
 	}
-
 
 	//Remove Command Pool
 	if (commandPool) {

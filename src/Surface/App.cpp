@@ -46,6 +46,18 @@ namespace App {
 		
 		//Create Vulkan Core
 		VkCore::vkInit(uwh);
+
+		//Setup ImGui
+		IMGUI_CHECKVERSION();
+		ImGui::CreateContext();
+		ImGuiIO& io = ImGui::GetIO(); (void)io;
+		io.WantCaptureMouse = true;
+		io.WantCaptureKeyboard = true;
+		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+		
+		//Setup Dear ImGui style
+		ImGui::StyleColorsDark();
+		ImGui_ImplGateware_Init(&GWindow);
 	}
 	
 	void Run() {
@@ -81,7 +93,7 @@ namespace App {
 				//Delta Time Loop
 				while (accumulator >= dt) {
 					//Update
-
+//					ImGui_ImplGateware_NewFrame(dt);
 
 					//Decrement Accumulator
 					accumulator -= dt;
@@ -153,6 +165,7 @@ void GWindowEvent() {
 
 	switch (winEvent) {
 	case GW::SYSTEM::GWindow::Events::DESTROY:
+		ImGui_ImplGateware_Shutdown();
 		CurrentScene->Cleanup();
 		VkCore::vkCleanup();
 
