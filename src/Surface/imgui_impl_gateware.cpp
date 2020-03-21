@@ -83,7 +83,7 @@ bool	ImGui_ImplGateware_Init(void* gwindow)
 		bool isFocus;
 		g_GWindow.IsFocus(isFocus);
 		if (isFocus)
-			io.MousePos = ImVec2(EventData.screenX, EventData.screenY);
+			io.MousePos = ImVec2(EventData.x, EventData.y);
 
 		switch (Event) {
 		case GW::INPUT::GBufferedInput::Events::KEYPRESSED:
