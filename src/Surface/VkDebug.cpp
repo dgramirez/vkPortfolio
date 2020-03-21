@@ -1,5 +1,5 @@
 #include "VkCore.h"
-#include "../VkGlobals.h"
+#include "../vkGlobals.h"
 
 namespace VkCore {
 #ifdef _DEBUG
@@ -12,7 +12,7 @@ namespace VkCore {
 
 	//Debug Initialization
 	VkResult VkDebug::Init() {
-		if (vkGlobals.instanceLayersActive.size())
+		if (vkGlobal.instanceLayersActive.size())
 		{
 			//Console Color
 			VkConsole = console_init();
@@ -20,7 +20,7 @@ namespace VkCore {
 			/* Load VK_EXT_debug_report entry points in debug builds */
 			PFN_vkCreateDebugReportCallbackEXT vkCreateDebugReportCallbackEXT =
 				reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>
-				(vkGetInstanceProcAddr(vkGlobals.instance, "vkCreateDebugReportCallbackEXT"));
+				(vkGetInstanceProcAddr(vkGlobal.instance, "vkCreateDebugReportCallbackEXT"));
 
 			/* Setup callback creation information */
 			VkDebugReportCallbackCreateInfoEXT callbackCreateInfo;
@@ -32,7 +32,7 @@ namespace VkCore {
 			callbackCreateInfo.pfnCallback = &MyDebugReportCallback;
 
 			/* Register the callback */
-			VkResult result = vkCreateDebugReportCallbackEXT(vkGlobals.instance, &callbackCreateInfo, nullptr, &vkGlobals.debugReportCallback);
+			VkResult result = vkCreateDebugReportCallbackEXT(vkGlobal.instance, &callbackCreateInfo, nullptr, &vkGlobal.debugReportCallback);
 			return result;
 		}
 			return VK_SUCCESS;
@@ -42,18 +42,18 @@ namespace VkCore {
 	//Cleanup
 	VkResult VkDebug::Cleanup() {
 		//Check to see if this was allocated
-		if (vkGlobals.debugReportCallback) {
+		if (vkGlobal.debugReportCallback) {
 			//Look for the pointer to where this extension's destroy is located
 			PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT =
-				reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT> (vkGetInstanceProcAddr(vkGlobals.instance, "vkDestroyDebugReportCallbackEXT"));
+				reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT> (vkGetInstanceProcAddr(vkGlobal.instance, "vkDestroyDebugReportCallbackEXT"));
 
 			//Ensure the function was actually found
 			if (vkDestroyDebugReportCallbackEXT) {
 				//Destroy the Debug Callback
-				vkDestroyDebugReportCallbackEXT(vkGlobals.instance, vkGlobals.debugReportCallback, VK_NULL_HANDLE);
+				vkDestroyDebugReportCallbackEXT(vkGlobal.instance, vkGlobal.debugReportCallback, VK_NULL_HANDLE);
 
 				//Set to NULL
-				vkGlobals.debugReportCallback = {};
+				vkGlobal.debugReportCallback = {};
 
 				return VK_SUCCESS;
 			}
@@ -91,10 +91,10 @@ namespace VkCore {
 	//Initialization
 	VkResult VkDebug::Init() {
 		//Clear All Layers.
-		vkGlobals.instanceLayersActive.clear();
+		vkGlobal.instanceLayersActive.clear();
 
 		//Clear Capacity.
-		vkGlobals.instanceLayersActive.shrink_to_fit();
+		vkGlobal.instanceLayersActive.shrink_to_fit();
 
 		return VK_SUCCESS;
 	}

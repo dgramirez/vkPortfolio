@@ -1,4 +1,4 @@
-#include "../VkGlobals.h"
+#include "../vkGlobals.h"
 #include "../Scenes/Scenes.h"
 #include "VkCore.h"
 #include <chrono>
@@ -172,7 +172,7 @@ void GWindowEvent() {
 		break;
 	case GW::SYSTEM::GWindow::Events::DISPLAY_CLOSED:
 		//Destroy Instance
-		if (vkGlobals.instance) { vkDestroyInstance(vkGlobals.instance, nullptr); vkGlobals.instance = {}; }
+		if (vkGlobal.instance) { vkDestroyInstance(vkGlobal.instance, nullptr); vkGlobal.instance = {}; }
 		break;
 	}
 }

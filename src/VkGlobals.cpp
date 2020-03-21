@@ -1,4 +1,4 @@
-#include "VkGlobals.h"
+#include "vkGlobals.h"
 
 VkResult VkGlobalObject::CreateImage(const VkFormat& _format, const VkExtent3D& _imageExtent, const VkSampleCountFlagBits& _samples, const VkImageTiling& _tiling, const VkImageUsageFlags& _usageFlags, const VkMemoryPropertyFlags& _memoryPropertyFlags, VkImage* _outImage, VkDeviceMemory* _outImageMemory)
 {
@@ -18,14 +18,14 @@ VkResult VkGlobalObject::CreateImage(const VkFormat& _format, const VkExtent3D& 
 	create_info.flags = 0;
 
 	//Create the image
-	VkResult r = vkCreateImage(vkGlobals.device, &create_info, VK_NULL_HANDLE, _outImage);
+	VkResult r = vkCreateImage(vkGlobal.device, &create_info, VK_NULL_HANDLE, _outImage);
 	if (r) return r;
 
 	//Gather Memory Information from image & Physical Device
 	VkMemoryRequirements memory_requirements;
-	vkGetImageMemoryRequirements(vkGlobals.device, *_outImage, &memory_requirements);
+	vkGetImageMemoryRequirements(vkGlobal.device, *_outImage, &memory_requirements);
 	VkPhysicalDeviceMemoryProperties memory_properties;
-	vkGetPhysicalDeviceMemoryProperties(vkGlobals.physicalDevice, &memory_properties);
+	vkGetPhysicalDeviceMemoryProperties(vkGlobal.physicalDevice, &memory_properties);
 
 	//Loop through the memory type count and see if there is a match with both the filter and property flags
 	int32_t memory_type_index = -1;
@@ -46,17 +46,17 @@ VkResult VkGlobalObject::CreateImage(const VkFormat& _format, const VkExtent3D& 
 	memory_allocate_info.memoryTypeIndex = memory_type_index;
 
 	//Allocate the memory created
-	r = vkAllocateMemory(vkGlobals.device, &memory_allocate_info, VK_NULL_HANDLE, _outImageMemory);
+	r = vkAllocateMemory(vkGlobal.device, &memory_allocate_info, VK_NULL_HANDLE, _outImageMemory);
 	if (r) {
-		vkDestroyImage(vkGlobals.device, *_outImage, VK_NULL_HANDLE);
+		vkDestroyImage(vkGlobal.device, *_outImage, VK_NULL_HANDLE);
 		return r;
 	}
 
 	//Bind the memory created
-	r = vkBindImageMemory(vkGlobals.device, *_outImage, *_outImageMemory, 0);
+	r = vkBindImageMemory(vkGlobal.device, *_outImage, *_outImageMemory, 0);
 	if (r) {
-		vkDestroyImage(vkGlobals.device, *_outImage, VK_NULL_HANDLE);
-		vkFreeMemory(vkGlobals.device, *_outImageMemory, VK_NULL_HANDLE);
+		vkDestroyImage(vkGlobal.device, *_outImage, VK_NULL_HANDLE);
+		vkFreeMemory(vkGlobal.device, *_outImageMemory, VK_NULL_HANDLE);
 		return r;
 	}
 
@@ -78,7 +78,7 @@ VkResult VkGlobalObject::CreateImageView(const VkImage& _image, const VkFormat& 
 	create_info.subresourceRange.layerCount = 1;
 
 	//Create the Surface (With Results) [VK_SUCCESS = 0]
-	VkResult r = vkCreateImageView(vkGlobals.device, &create_info, nullptr, _outImageView);
+	VkResult r = vkCreateImageView(vkGlobal.device, &create_info, nullptr, _outImageView);
 
 	//Image View has been created successfully, return it
 	return r;

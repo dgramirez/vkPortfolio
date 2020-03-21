@@ -46,7 +46,7 @@ struct VkGlobalObject {
 	static VkResult CreateImage(const VkFormat& _format, const VkExtent3D& _imageExtent, const VkSampleCountFlagBits& _samples, const VkImageTiling& _tiling, const VkImageUsageFlags& _usageFlags, const VkMemoryPropertyFlags& _memoryPropertyFlags, VkImage* _outImage, VkDeviceMemory* _outImageMemory);
 	static VkResult CreateImageView(const VkImage& _image, const VkFormat& _format, const VkImageAspectFlags& _imageAspectFlags, VkImageView* _outImageView);
 	};
-extern VkGlobalObject vkGlobals;
+extern VkGlobalObject vkGlobal;
 
 struct ImGuiGlobalObject {
 	ImGui_ImplVulkan_InitInfo init_info = {};

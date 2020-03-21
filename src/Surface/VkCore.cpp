@@ -1,5 +1,5 @@
 #include "VkCore.h"
-#include "../VkGlobals.h"
+#include "../vkGlobals.h"
 
 #define VK_FAIL(vk_result) if (vk_result) return false;
 
@@ -8,7 +8,7 @@
 #elif defined(__linux__)
 #include "vulkan/vulkan_xlib.h"
 #endif
-VkGlobalObject vkGlobals;
+VkGlobalObject vkGlobal;
 
 //Prototype (Creation)
 VkResult VulkanPrereq();
@@ -55,21 +55,21 @@ namespace VkCore {
 	}
 	void vkCleanup() {
 		//Cleanup VMA Allocator
-		if (vkGlobals.allocator) {
-			vmaDestroyAllocator(vkGlobals.allocator); 
-			vkGlobals.allocator = {};
+		if (vkGlobal.allocator) {
+			vmaDestroyAllocator(vkGlobal.allocator); 
+			vkGlobal.allocator = {};
 		}
 
 		//Cleanup Device
-		if (vkGlobals.device) {
-			vkDestroyDevice(vkGlobals.device, nullptr);
-			vkGlobals.device = {};
+		if (vkGlobal.device) {
+			vkDestroyDevice(vkGlobal.device, nullptr);
+			vkGlobal.device = {};
 		}
 
 		//Destroy Surface
-		if (vkGlobals.surface) { 
-			vkDestroySurfaceKHR(vkGlobals.instance, vkGlobals.surface, nullptr);
-			vkGlobals.surface = {};
+		if (vkGlobal.surface) { 
+			vkDestroySurfaceKHR(vkGlobal.instance, vkGlobal.surface, nullptr);
+			vkGlobal.surface = {};
 		}
 
 		//Destroy Callback
@@ -85,14 +85,14 @@ VkResult VulkanPrereq() {
 	//Query Instance Extension Properties
 	uint32_t eSize;
 	vkEnumerateInstanceExtensionProperties(VK_NULL_HANDLE, &eSize, VK_NULL_HANDLE);
-	vkGlobals.instanceExtensionsAll.resize(eSize);
-	vkEnumerateInstanceExtensionProperties(VK_NULL_HANDLE, &eSize, vkGlobals.instanceExtensionsAll.data());
+	vkGlobal.instanceExtensionsAll.resize(eSize);
+	vkEnumerateInstanceExtensionProperties(VK_NULL_HANDLE, &eSize, vkGlobal.instanceExtensionsAll.data());
 
 	//Query Instance Layer Properties
 	uint32_t lSize;
 	vkEnumerateInstanceLayerProperties(&lSize, VK_NULL_HANDLE);
-	vkGlobals.instanceLayersAll.resize(lSize);
-	vkEnumerateInstanceLayerProperties(&lSize, vkGlobals.instanceLayersAll.data());
+	vkGlobal.instanceLayersAll.resize(lSize);
+	vkEnumerateInstanceLayerProperties(&lSize, vkGlobal.instanceLayersAll.data());
 
 	//Setup the vectors
 	std::vector<const char*> iExt, iLyr;
@@ -102,7 +102,7 @@ VkResult VulkanPrereq() {
 	iExt.push_back(GetPlatformSurfaceName());
 
 	//Add needed (but verified later) extensions to the vector, due to lack of physical device
-	vkGlobals.deviceExtensionsActive.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+	vkGlobal.deviceExtensionsActive.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
 	/////////////////////////////////////////////////
 	// Add Any Additional Extensions & Layers Here //
@@ -112,7 +112,7 @@ VkResult VulkanPrereq() {
 
 	//Verify the instance extensions can be found
 	uint32_t count = 0;
-	for (auto extension : vkGlobals.instanceExtensionsAll) {
+	for (auto extension : vkGlobal.instanceExtensionsAll) {
 		for (auto active_extension : iExt) {
 			if (!strcmp(active_extension, extension.extensionName)) { ++count; break; }
 		}
@@ -125,7 +125,7 @@ VkResult VulkanPrereq() {
 
 	//Verify the intance layers can be found
 	count = 0;
-	for (auto layer : vkGlobals.instanceLayersAll) {
+	for (auto layer : vkGlobal.instanceLayersAll) {
 		for (auto active_layer : iLyr) {
 			if (!strcmp(active_layer, layer.layerName)) { ++count; break; }
 		}
@@ -137,8 +137,8 @@ VkResult VulkanPrereq() {
 	}
 
 	//Record the active extensions and layers
-	vkGlobals.instanceExtensionsActive = iExt;
-	vkGlobals.instanceLayersActive = iLyr;
+	vkGlobal.instanceExtensionsActive = iExt;
+	vkGlobal.instanceLayersActive = iLyr;
 
 	return VK_SUCCESS;
 }
@@ -159,13 +159,13 @@ VkResult SetupInstance() {
 	create_info.pApplicationInfo = &app_info;
 
 	//Extensions
-	create_info.enabledExtensionCount = vkGlobals.instanceExtensionsActive.size();
-	create_info.ppEnabledExtensionNames = vkGlobals.instanceExtensionsActive.data();
-	create_info.enabledLayerCount = vkGlobals.instanceLayersActive.size();
-	create_info.ppEnabledLayerNames = vkGlobals.instanceLayersActive.data();
+	create_info.enabledExtensionCount = vkGlobal.instanceExtensionsActive.size();
+	create_info.ppEnabledExtensionNames = vkGlobal.instanceExtensionsActive.data();
+	create_info.enabledLayerCount = vkGlobal.instanceLayersActive.size();
+	create_info.ppEnabledLayerNames = vkGlobal.instanceLayersActive.data();
 
 	//Create the instance
-	VkResult r = vkCreateInstance(&create_info, VK_NULL_HANDLE, &vkGlobals.instance);
+	VkResult r = vkCreateInstance(&create_info, VK_NULL_HANDLE, &vkGlobal.instance);
 	VK_ASSERT(r);
 	return r;
 }
@@ -181,7 +181,7 @@ VkResult SetupSurface(const GW::SYSTEM::UNIVERSAL_WINDOW_HANDLE& uwh) {
 	create_info.flags = 0;
 	create_info.pNext = 0;
 
-	VkResult r = vkCreateWin32SurfaceKHR(vkGlobals.instance, &create_info, VK_NULL_HANDLE, &vkGlobals.surface);
+	VkResult r = vkCreateWin32SurfaceKHR(vkGlobal.instance, &create_info, VK_NULL_HANDLE, &vkGlobal.surface);
 	VK_ASSERT(r);
 	return r;
 #elif defined(__linux__)
@@ -196,7 +196,7 @@ VkResult SetupSurface(const GW::SYSTEM::UNIVERSAL_WINDOW_HANDLE& uwh) {
 	create_info.flags = 0;
 	create_info.pNext = VK_NULL_HANDLE;
 
-	VkResult r = vkCreateXlibSurfaceKHR(vkGlobals.instance, &create_info, VK_NULL_HANDLE, &vkGlobals.surface);
+	VkResult r = vkCreateXlibSurfaceKHR(vkGlobal.instance, &create_info, VK_NULL_HANDLE, &vkGlobal.surface);
 	VK_ASSERT(r);
 	return r;
 #endif
@@ -206,25 +206,25 @@ VkResult SetupSurface(const GW::SYSTEM::UNIVERSAL_WINDOW_HANDLE& uwh) {
 VkResult SetupPhysicalDevice() {
 	//Enumerate all physical devices
 	uint32_t device_count;
-	vkEnumeratePhysicalDevices(vkGlobals.instance, &device_count, VK_NULL_HANDLE);
+	vkEnumeratePhysicalDevices(vkGlobal.instance, &device_count, VK_NULL_HANDLE);
 	if (device_count < 1) {
 		VK_ASSERT(VK_ERROR_NOT_PERMITTED_EXT);
 		return VK_ERROR_NOT_PERMITTED_EXT;
 	}
 
-	vkGlobals.physicalDeviceAll.resize(device_count);
-	vkEnumeratePhysicalDevices(vkGlobals.instance, &device_count, vkGlobals.physicalDeviceAll.data());
+	vkGlobal.physicalDeviceAll.resize(device_count);
+	vkEnumeratePhysicalDevices(vkGlobal.instance, &device_count, vkGlobal.physicalDeviceAll.data());
 
 	//Verify Each Physical Devices Requirements
 	PhysicalDeviceVerify();
-	if (vkGlobals.physicalDeviceAll.size() < 1) {
+	if (vkGlobal.physicalDeviceAll.size() < 1) {
 		VK_ASSERT(VK_ERROR_EXTENSION_NOT_PRESENT);
 		return VK_ERROR_EXTENSION_NOT_PRESENT;
 	}
 
 	//Get a physical device from file (Future)
 //	GetPhysicalDeviceFromFile();
-	if (vkGlobals.physicalDevice)
+	if (vkGlobal.physicalDevice)
 		return VK_SUCCESS;
 
 	//Find best one to use.
@@ -237,28 +237,28 @@ VkResult SetupPhysicalDevice() {
 }
 VkResult SetupLogicalDevice() {
 	//Setup Size for Create Info
-	vkGlobals.uniqueIndices.push_back(vkGlobals.GRAPHICS_INDEX);
-	if (vkGlobals.GRAPHICS_INDEX != vkGlobals.PRESENT_INDEX)
-		vkGlobals.uniqueIndices.push_back(vkGlobals.PRESENT_INDEX);
+	vkGlobal.uniqueIndices.push_back(vkGlobal.GRAPHICS_INDEX);
+	if (vkGlobal.GRAPHICS_INDEX != vkGlobal.PRESENT_INDEX)
+		vkGlobal.uniqueIndices.push_back(vkGlobal.PRESENT_INDEX);
 
-	if (vkGlobals.PRESENT_INDEX != vkGlobals.COMPUTE_INDEX)
-		vkGlobals.uniqueIndices.push_back(vkGlobals.COMPUTE_INDEX);
+	if (vkGlobal.PRESENT_INDEX != vkGlobal.COMPUTE_INDEX)
+		vkGlobal.uniqueIndices.push_back(vkGlobal.COMPUTE_INDEX);
 
-	if (vkGlobals.COMPUTE_INDEX != vkGlobals.TRANSFER_INDEX)
-		vkGlobals.uniqueIndices.push_back(vkGlobals.TRANSFER_INDEX);
+	if (vkGlobal.COMPUTE_INDEX != vkGlobal.TRANSFER_INDEX)
+		vkGlobal.uniqueIndices.push_back(vkGlobal.TRANSFER_INDEX);
 
 	//Setup Create Infos
 	std::vector<VkDeviceQueueCreateInfo> QueueCreateInfo;
-	QueueCreateInfo.resize(vkGlobals.uniqueIndices.size());
+	QueueCreateInfo.resize(vkGlobal.uniqueIndices.size());
 
 	//Set up Create Info for all unique queue families
 	float priority = 1.0f;
-	for (uint32_t i = 0; i < vkGlobals.uniqueIndices.size(); ++i)
+	for (uint32_t i = 0; i < vkGlobal.uniqueIndices.size(); ++i)
 	{
 		VkDeviceQueueCreateInfo create_info = {};
 
 		create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		create_info.queueFamilyIndex = vkGlobals.uniqueIndices[i];
+		create_info.queueFamilyIndex = vkGlobal.uniqueIndices[i];
 		create_info.queueCount = 1;
 		create_info.pQueuePriorities = &priority;
 		QueueCreateInfo[i] = create_info;
@@ -266,9 +266,9 @@ VkResult SetupLogicalDevice() {
 
 	//Verify Device Extensions are good
 	bool success = false;
-	for (auto extension : vkGlobals.deviceExtensionsActive) {
+	for (auto extension : vkGlobal.deviceExtensionsActive) {
 		success = false;
-		for (auto all_extensions : vkGlobals.physicalDeviceExtensionsAll[vkGlobals.physicalDevice]) {
+		for (auto all_extensions : vkGlobal.physicalDeviceExtensionsAll[vkGlobal.physicalDevice]) {
 			if (!strcmp(extension, all_extensions.extensionName)) {
 				success = true;
 				break;
@@ -285,19 +285,19 @@ VkResult SetupLogicalDevice() {
 	create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 	create_info.pQueueCreateInfos = QueueCreateInfo.data();
 	create_info.queueCreateInfoCount = QueueCreateInfo.size();
-	create_info.pEnabledFeatures = &vkGlobals.physicalDeviceFeaturesAll[vkGlobals.physicalDevice];
+	create_info.pEnabledFeatures = &vkGlobal.physicalDeviceFeaturesAll[vkGlobal.physicalDevice];
 
-	create_info.enabledExtensionCount = vkGlobals.deviceExtensionsActive.size();
-	create_info.ppEnabledExtensionNames = vkGlobals.deviceExtensionsActive.data();
+	create_info.enabledExtensionCount = vkGlobal.deviceExtensionsActive.size();
+	create_info.ppEnabledExtensionNames = vkGlobal.deviceExtensionsActive.data();
 
 	//Create the Surface (With Results) [VK_SUCCESS = 0]
-	VkResult r = vkCreateDevice(vkGlobals.physicalDevice, &create_info, VK_NULL_HANDLE, &vkGlobals.device);
+	VkResult r = vkCreateDevice(vkGlobal.physicalDevice, &create_info, VK_NULL_HANDLE, &vkGlobal.device);
 
 	//If Device has been created, Setup the Device Queue for graphics and present family
-	vkGetDeviceQueue(vkGlobals.device, vkGlobals.GRAPHICS_INDEX, 0, &vkGlobals.queueGraphics);
-	vkGetDeviceQueue(vkGlobals.device, vkGlobals.PRESENT_INDEX, 0, &vkGlobals.queuePresent);
-	vkGetDeviceQueue(vkGlobals.device, vkGlobals.COMPUTE_INDEX, 0, &vkGlobals.queueCompute);
-	vkGetDeviceQueue(vkGlobals.device, vkGlobals.TRANSFER_INDEX, 0, &vkGlobals.queueTransfer);
+	vkGetDeviceQueue(vkGlobal.device, vkGlobal.GRAPHICS_INDEX, 0, &vkGlobal.queueGraphics);
+	vkGetDeviceQueue(vkGlobal.device, vkGlobal.PRESENT_INDEX, 0, &vkGlobal.queuePresent);
+	vkGetDeviceQueue(vkGlobal.device, vkGlobal.COMPUTE_INDEX, 0, &vkGlobal.queueCompute);
+	vkGetDeviceQueue(vkGlobal.device, vkGlobal.TRANSFER_INDEX, 0, &vkGlobal.queueTransfer);
 
 	//Device has been created successfully!
 	return r;
@@ -306,17 +306,17 @@ VkResult SetupLogicalDevice() {
 }
 VkResult SetupVMAAllocator() {
 	VmaAllocatorCreateInfo allocatorInfo = {};
-	allocatorInfo.physicalDevice = vkGlobals.physicalDevice;
-	allocatorInfo.device = vkGlobals.device;
+	allocatorInfo.physicalDevice = vkGlobal.physicalDevice;
+	allocatorInfo.device = vkGlobal.device;
 
-	return vmaCreateAllocator(&allocatorInfo, &vkGlobals.allocator);
+	return vmaCreateAllocator(&allocatorInfo, &vkGlobal.allocator);
 }
 
 //Definitions (Destruction)
 VkResult DestroyInstance() {
 #ifndef __linux__
 	//Destroy Instance [Linux cannot destroy the instance at this time for GWindow]
-	if (vkGlobals.instance) { vkDestroyInstance(vkGlobals.instance, nullptr); vkGlobals.instance = {}; }
+	if (vkGlobal.instance) { vkDestroyInstance(vkGlobal.instance, nullptr); vkGlobal.instance = {}; }
 #endif
 	return VK_SUCCESS;
 }
@@ -335,9 +335,9 @@ void PhysicalDeviceVerify() {
 	std::vector<VkQueueFamilyProperties> qfProperties;
 	VkPhysicalDevice current_device;
 
-	for (uint32_t i = 0; i < vkGlobals.physicalDeviceAll.size(); ++i) {
+	for (uint32_t i = 0; i < vkGlobal.physicalDeviceAll.size(); ++i) {
 		//Clear & Reset Variables
-		current_device = vkGlobals.physicalDeviceAll[i];
+		current_device = vkGlobal.physicalDeviceAll[i];
 		devExt.clear();
 		qfProperties.clear();
 
@@ -346,7 +346,7 @@ void PhysicalDeviceVerify() {
 		vkEnumerateDeviceExtensionProperties(current_device, VK_NULL_HANDLE, &extCount, VK_NULL_HANDLE);
 		if (extCount < 1) {
 			//This is bad. Remove from array
-			vkGlobals.physicalDeviceAll.erase(vkGlobals.physicalDeviceAll.begin() + i);
+			vkGlobal.physicalDeviceAll.erase(vkGlobal.physicalDeviceAll.begin() + i);
 
 			//Decrement i
 			--i;
@@ -367,7 +367,7 @@ void PhysicalDeviceVerify() {
 		}
 		if (!pass) {
 			//This is bad. Remove from array
-			vkGlobals.physicalDeviceAll.erase(vkGlobals.physicalDeviceAll.begin() + i);
+			vkGlobal.physicalDeviceAll.erase(vkGlobal.physicalDeviceAll.begin() + i);
 
 			//Decrement i
 			--i;
@@ -381,7 +381,7 @@ void PhysicalDeviceVerify() {
 		vkGetPhysicalDeviceQueueFamilyProperties(current_device, &fqCount, VK_NULL_HANDLE);
 		if (fqCount < 1) {
 			//This is bad. Remove from array
-			vkGlobals.physicalDeviceAll.erase(vkGlobals.physicalDeviceAll.begin() + i);
+			vkGlobal.physicalDeviceAll.erase(vkGlobal.physicalDeviceAll.begin() + i);
 
 			//Decrement i
 			--i;
@@ -399,7 +399,7 @@ void PhysicalDeviceVerify() {
 			flag_check |= queue_fam.queueFlags & (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
 			if (queue_fam.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
 				VkBool32 presentSupport;
-				VkResult r = vkGetPhysicalDeviceSurfaceSupportKHR(current_device, j, vkGlobals.surface, &presentSupport);
+				VkResult r = vkGetPhysicalDeviceSurfaceSupportKHR(current_device, j, vkGlobal.surface, &presentSupport);
 				if (presentSupport)
 					flag_check |= 0x4;
 			}
@@ -408,7 +408,7 @@ void PhysicalDeviceVerify() {
 		}
 		if (flag_check < 7) {
 			//This is bad. Remove from array
-			vkGlobals.physicalDeviceAll.erase(vkGlobals.physicalDeviceAll.begin() + i);
+			vkGlobal.physicalDeviceAll.erase(vkGlobal.physicalDeviceAll.begin() + i);
 
 			//Decrement i
 			--i;
@@ -422,34 +422,34 @@ void PhysicalDeviceVerify() {
 		VkPhysicalDeviceMemoryProperties device_memory_props;
 		VkPhysicalDeviceProperties device_props;
 
-		vkGlobals.physicalDeviceExtensionsAll[current_device] = devExt;
-		vkGlobals.physicalDeviceQueueFamilyPropertiesAll[current_device] = qfProperties;
+		vkGlobal.physicalDeviceExtensionsAll[current_device] = devExt;
+		vkGlobal.physicalDeviceQueueFamilyPropertiesAll[current_device] = qfProperties;
 
 		vkGetPhysicalDeviceFeatures(current_device, &feat);
-		vkGlobals.physicalDeviceFeaturesAll[current_device] = feat;
+		vkGlobal.physicalDeviceFeaturesAll[current_device] = feat;
 
 		vkGetPhysicalDeviceProperties(current_device, &device_props);
-		vkGlobals.physicalDevicePropertiesAll[current_device] = device_props;
+		vkGlobal.physicalDevicePropertiesAll[current_device] = device_props;
 
 		vkGetPhysicalDeviceMemoryProperties(current_device, &device_memory_props);
-		vkGlobals.physicalDeviceMemoryPropertiesAll[current_device] = device_memory_props;
+		vkGlobal.physicalDeviceMemoryPropertiesAll[current_device] = device_memory_props;
 	}
 }
 void GetBestPhysicalDevice() {
 	//There is only 1 to start with
-	if (vkGlobals.physicalDeviceAll.size() == 1)
+	if (vkGlobal.physicalDeviceAll.size() == 1)
 	{
-		vkGlobals.physicalDevice = vkGlobals.physicalDeviceAll[0];
+		vkGlobal.physicalDevice = vkGlobal.physicalDeviceAll[0];
 		return;
 	}
 
 	//Create a copy of the competitors
-	std::vector<VkPhysicalDevice> copyPDev = vkGlobals.physicalDeviceAll;
+	std::vector<VkPhysicalDevice> copyPDev = vkGlobal.physicalDeviceAll;
 
 	//Find the Discrete ones
 	VkPhysicalDeviceProperties pDevProps;
 	for (auto physical_device = copyPDev.begin(); physical_device != copyPDev.end(); ++physical_device) {
-		pDevProps = vkGlobals.physicalDevicePropertiesAll[*physical_device];
+		pDevProps = vkGlobal.physicalDevicePropertiesAll[*physical_device];
 		if (pDevProps.deviceType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
 			--physical_device;
 			copyPDev.erase(physical_device + 1);
@@ -459,13 +459,13 @@ void GetBestPhysicalDevice() {
 	//If there is one left, It Wins
 	if (copyPDev.size() == 1)
 	{
-		vkGlobals.physicalDevice = copyPDev[0];
+		vkGlobal.physicalDevice = copyPDev[0];
 		return;
 	}
 
 	//Check: No Discrete Devices Available, But there are more than 1 devices (Integrated, Virtual, CPU, Others...)
 	if (copyPDev.size() < 1)
-		copyPDev = vkGlobals.physicalDeviceAll;
+		copyPDev = vkGlobal.physicalDeviceAll;
 
 	//Best Match! [TBD]
 	//vkGetPhysicalDeviceFeatures
@@ -477,7 +477,7 @@ void GetBestPhysicalDevice() {
 }
 void SetQueueFamilyIndices(const VkQueueFlags& _priority1, const VkQueueFlags& _priority2, const VkQueueFlags& _priority3, const VkQueueFlags& _priority4, uint16_t& _index) {
 	//Setup Physical Device Family Queue Properties
-	auto queue_families = vkGlobals.physicalDeviceQueueFamilyPropertiesAll[vkGlobals.physicalDevice];
+	auto queue_families = vkGlobal.physicalDeviceQueueFamilyPropertiesAll[vkGlobal.physicalDevice];
 
 	//Find Best for Transfer Queue
 	uint16_t score = 0;
@@ -521,8 +521,8 @@ void SetQueueFamilyIndices(const VkQueueFlags& _priority1, const VkQueueFlags& _
 	}
 }
 void GetQueueFamilyIndices() {
-	SetQueueFamilyIndices(VK_QUEUE_TRANSFER_BIT, VK_QUEUE_SPARSE_BINDING_BIT, VK_QUEUE_COMPUTE_BIT, VK_QUEUE_GRAPHICS_BIT, vkGlobals.TRANSFER_INDEX);
-	SetQueueFamilyIndices(VK_QUEUE_COMPUTE_BIT, VK_QUEUE_SPARSE_BINDING_BIT, VK_QUEUE_TRANSFER_BIT, VK_QUEUE_GRAPHICS_BIT, vkGlobals.COMPUTE_INDEX);
-	SetQueueFamilyIndices(VK_QUEUE_GRAPHICS_BIT, VK_QUEUE_SPARSE_BINDING_BIT, VK_QUEUE_TRANSFER_BIT, VK_QUEUE_COMPUTE_BIT, vkGlobals.GRAPHICS_INDEX);
-	SetQueueFamilyIndices(VK_QUEUE_GRAPHICS_BIT, VK_QUEUE_SPARSE_BINDING_BIT, VK_QUEUE_TRANSFER_BIT, VK_QUEUE_COMPUTE_BIT, vkGlobals.PRESENT_INDEX);
+	SetQueueFamilyIndices(VK_QUEUE_TRANSFER_BIT, VK_QUEUE_SPARSE_BINDING_BIT, VK_QUEUE_COMPUTE_BIT, VK_QUEUE_GRAPHICS_BIT, vkGlobal.TRANSFER_INDEX);
+	SetQueueFamilyIndices(VK_QUEUE_COMPUTE_BIT, VK_QUEUE_SPARSE_BINDING_BIT, VK_QUEUE_TRANSFER_BIT, VK_QUEUE_GRAPHICS_BIT, vkGlobal.COMPUTE_INDEX);
+	SetQueueFamilyIndices(VK_QUEUE_GRAPHICS_BIT, VK_QUEUE_SPARSE_BINDING_BIT, VK_QUEUE_TRANSFER_BIT, VK_QUEUE_COMPUTE_BIT, vkGlobal.GRAPHICS_INDEX);
+	SetQueueFamilyIndices(VK_QUEUE_GRAPHICS_BIT, VK_QUEUE_SPARSE_BINDING_BIT, VK_QUEUE_TRANSFER_BIT, VK_QUEUE_COMPUTE_BIT, vkGlobal.PRESENT_INDEX);
 }

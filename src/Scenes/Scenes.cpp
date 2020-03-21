@@ -1,5 +1,5 @@
 #include "Scenes.h"
-#include "../VkGlobals.h"
+#include "../vkGlobals.h"
 
 ////////////////////////
 // Scene Menu Methods //
@@ -16,7 +16,7 @@ void SceneMenu::RenderImGui() {
 ///////////////////
 VkResult Scene::UpdateSurfaceData() {
 	//Gather The Surface Capabilities
-	VkResult r = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vkGlobals.physicalDevice, vkGlobals.surface, &vkGlobals.surfaceCapabilities);
+	VkResult r = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vkGlobal.physicalDevice, vkGlobal.surface, &vkGlobal.surfaceCapabilities);
 	if (r) {
 		VK_ASSERT(r);
 		return r;
@@ -24,7 +24,7 @@ VkResult Scene::UpdateSurfaceData() {
 
 	//Gather all Surface Formats
 	uint32_t formatCount = 0;
-	r = vkGetPhysicalDeviceSurfaceFormatsKHR(vkGlobals.physicalDevice, vkGlobals.surface, &formatCount, VK_NULL_HANDLE);
+	r = vkGetPhysicalDeviceSurfaceFormatsKHR(vkGlobal.physicalDevice, vkGlobal.surface, &formatCount, VK_NULL_HANDLE);
 	if (formatCount < 1) {
 		VK_ASSERT(VK_ERROR_FEATURE_NOT_PRESENT);
 		return VK_ERROR_FEATURE_NOT_PRESENT;
@@ -34,8 +34,8 @@ VkResult Scene::UpdateSurfaceData() {
 		return r;
 	}
 	//Resize Surface Formats Vector and Put the contents in it.
-	vkGlobals.surfaceFormatsAll.resize(formatCount);
-	r = vkGetPhysicalDeviceSurfaceFormatsKHR(vkGlobals.physicalDevice, vkGlobals.surface, &formatCount, vkGlobals.surfaceFormatsAll.data());
+	vkGlobal.surfaceFormatsAll.resize(formatCount);
+	r = vkGetPhysicalDeviceSurfaceFormatsKHR(vkGlobal.physicalDevice, vkGlobal.surface, &formatCount, vkGlobal.surfaceFormatsAll.data());
 	if (r) {
 		VK_ASSERT(r);
 		return r;
@@ -43,7 +43,7 @@ VkResult Scene::UpdateSurfaceData() {
 
 	//Gather all Present Modes
 	uint32_t presentModeCount = 0;
-	r = vkGetPhysicalDeviceSurfacePresentModesKHR(vkGlobals.physicalDevice, vkGlobals.surface, &presentModeCount, VK_NULL_HANDLE);
+	r = vkGetPhysicalDeviceSurfacePresentModesKHR(vkGlobal.physicalDevice, vkGlobal.surface, &presentModeCount, VK_NULL_HANDLE);
 	if (presentModeCount < 1) {
 		VK_ASSERT(VK_ERROR_FEATURE_NOT_PRESENT);
 		return VK_ERROR_FEATURE_NOT_PRESENT;
@@ -53,8 +53,8 @@ VkResult Scene::UpdateSurfaceData() {
 		return r;
 	}
 	//Resize Present Modes Vector and Put the contents in it.
-	vkGlobals.surfacePresentModesAll.resize(presentModeCount);
-	r = vkGetPhysicalDeviceSurfacePresentModesKHR(vkGlobals.physicalDevice, vkGlobals.surface, &presentModeCount, vkGlobals.surfacePresentModesAll.data());
+	vkGlobal.surfacePresentModesAll.resize(presentModeCount);
+	r = vkGetPhysicalDeviceSurfacePresentModesKHR(vkGlobal.physicalDevice, vkGlobal.surface, &presentModeCount, vkGlobal.surfacePresentModesAll.data());
 	if (r) {
 		VK_ASSERT(r);
 	}
@@ -71,14 +71,14 @@ VkResult Scene::CreateSwapchainPresetBasic()
 VkResult Scene::CreateSwapchain() {
 	//Gather Swapchain Count
 	if (surfaceCapabilities.minImageCount > 0 && frameMax < surfaceCapabilities.minImageCount)
-		frameMax = vkGlobals.surfaceCapabilities.minImageCount;
-	if (vkGlobals.surfaceCapabilities.maxImageCount > 0 && frameMax > vkGlobals.surfaceCapabilities.maxImageCount)
+		frameMax = vkGlobal.surfaceCapabilities.minImageCount;
+	if (vkGlobal.surfaceCapabilities.maxImageCount > 0 && frameMax > vkGlobal.surfaceCapabilities.maxImageCount)
 		frameMax = surfaceCapabilities.maxImageCount;
 
 	//Create Info for SwapchainKHR [Part 1]
 	VkSwapchainCreateInfoKHR create_info = {};
 	create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-	create_info.surface = vkGlobals.surface;
+	create_info.surface = vkGlobal.surface;
 	create_info.minImageCount = frameMax;
 	create_info.imageFormat = surfaceFormat.format;
 	create_info.imageColorSpace = surfaceFormat.colorSpace;
@@ -89,12 +89,12 @@ VkResult Scene::CreateSwapchain() {
 	create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 	create_info.presentMode = surfacePresentMode;
 	create_info.clipped = VK_TRUE;
-	create_info.oldSwapchain = vkGlobals.swapchain;
+	create_info.oldSwapchain = vkGlobal.swapchain;
 
 	//Setup Correct Queue Family Indices
-	if (vkGlobals.uniqueIndices.size() > 1) {
-		create_info.queueFamilyIndexCount = vkGlobals.uniqueIndices.size();
-		create_info.pQueueFamilyIndices = vkGlobals.uniqueIndices.data();
+	if (vkGlobal.uniqueIndices.size() > 1) {
+		create_info.queueFamilyIndexCount = vkGlobal.uniqueIndices.size();
+		create_info.pQueueFamilyIndices = vkGlobal.uniqueIndices.data();
 		create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
 	}
 	else {
@@ -102,20 +102,20 @@ VkResult Scene::CreateSwapchain() {
 	}
 
 	//Create Swapchain
-	VkResult r = vkCreateSwapchainKHR(vkGlobals.device, &create_info, nullptr, &swapchain);
+	VkResult r = vkCreateSwapchainKHR(vkGlobal.device, &create_info, nullptr, &swapchain);
 	if (r) {
 		VK_ASSERT(r);
 		return r;
 	}
 
 	//Swapchain Image Setup
-	r = vkGetSwapchainImagesKHR(vkGlobals.device, swapchain, &frameMax, VK_NULL_HANDLE);
+	r = vkGetSwapchainImagesKHR(vkGlobal.device, swapchain, &frameMax, VK_NULL_HANDLE);
 	if (r) {
 		VK_ASSERT(r);
 		return r;
 	}
 	swapchainImage.resize(frameMax);
-	r = vkGetSwapchainImagesKHR(vkGlobals.device, swapchain, &frameMax, swapchainImage.data());
+	r = vkGetSwapchainImagesKHR(vkGlobal.device, swapchain, &frameMax, swapchainImage.data());
 	if (r) {
 		VK_ASSERT(r);
 		return r;
@@ -144,7 +144,7 @@ VkResult Scene::CreateRenderPass(const bool& _depth, const bool& _msaa, const Vk
 	//Primary Swapchain Description and Swapchain
 	VkAttachmentDescription color_attachment_description = {};
 	color_attachment_description.format = surfaceFormat.format;
-	color_attachment_description.samples = vkGlobals.msaa;
+	color_attachment_description.samples = vkGlobal.msaa;
 	color_attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	color_attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 	color_attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -163,7 +163,7 @@ VkResult Scene::CreateRenderPass(const bool& _depth, const bool& _msaa, const Vk
 	VkAttachmentReference depth_attachment_reference = {};
 	if (_depth) {
 		depth_attachment_description.format = _depthFormat;
-		depth_attachment_description.samples = vkGlobals.msaa;
+		depth_attachment_description.samples = vkGlobal.msaa;
 		depth_attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		depth_attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		depth_attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -222,7 +222,7 @@ VkResult Scene::CreateRenderPass(const bool& _depth, const bool& _msaa, const Vk
 	render_pass_create_info.dependencyCount = 1;
 	render_pass_create_info.pDependencies = &subpass_dependency;
 
-	VkResult r = vkCreateRenderPass(vkGlobals.device, &render_pass_create_info, nullptr, &renderPass);
+	VkResult r = vkCreateRenderPass(vkGlobal.device, &render_pass_create_info, nullptr, &renderPass);
 
 	return r;
 }
@@ -262,7 +262,7 @@ VkResult Scene::CreateFramebuffer(const bool& _depth, const bool& _msaa, const V
 		frame_buffer_create_info.layers = 1;
 
 		//Create the Surface (With Results) [VK_SUCCESS = 0]
-		r = vkCreateFramebuffer(vkGlobals.device, &frame_buffer_create_info, nullptr, &swapchainFramebuffer[i]);
+		r = vkCreateFramebuffer(vkGlobal.device, &frame_buffer_create_info, nullptr, &swapchainFramebuffer[i]);
 	}
 
 	return r;
@@ -273,9 +273,9 @@ VkResult Scene::CreateCommandPreset()
 	VkCommandPoolCreateInfo create_info = {};
 	create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-	create_info.queueFamilyIndex = vkGlobals.GRAPHICS_INDEX;
+	create_info.queueFamilyIndex = vkGlobal.GRAPHICS_INDEX;
 
-	VkResult r = vkCreateCommandPool(vkGlobals.device, &create_info, nullptr, &commandPool);
+	VkResult r = vkCreateCommandPool(vkGlobal.device, &create_info, nullptr, &commandPool);
 	if (r) {
 		VK_ASSERT(r);
 		return r;
@@ -290,7 +290,7 @@ VkResult Scene::CreateCommandPreset()
 
 	//Create Command Buffer
 	commandBuffer.resize(frameMax);
-	r = vkAllocateCommandBuffers(vkGlobals.device, &command_buffer_allocate_info, &commandBuffer[0]);
+	r = vkAllocateCommandBuffers(vkGlobal.device, &command_buffer_allocate_info, &commandBuffer[0]);
 	if (r)
 		VK_ASSERT(r);
 
@@ -315,15 +315,15 @@ VkResult Scene::CreateSyncPreset()
 	//Create the Semaphores and Fences
 	VkResult r;
 	for (unsigned int i = 0; i < frameMax; ++i) {
-		r = vkCreateSemaphore(vkGlobals.device, &semaphore_create_info, nullptr, &sceneSemaphoreIA[i]);
+		r = vkCreateSemaphore(vkGlobal.device, &semaphore_create_info, nullptr, &sceneSemaphoreIA[i]);
 		if (r) {
 			return r;
 		}
-		r = vkCreateSemaphore(vkGlobals.device, &semaphore_create_info, nullptr, &sceneSemaphoreRF[i]);
+		r = vkCreateSemaphore(vkGlobal.device, &semaphore_create_info, nullptr, &sceneSemaphoreRF[i]);
 		if (r) {
 			return r;
 		}
-		r = vkCreateFence(vkGlobals.device, &fence_create_info, nullptr, &sceneFence[i]);
+		r = vkCreateFence(vkGlobal.device, &fence_create_info, nullptr, &sceneFence[i]);
 		if (r) {
 			return r;
 		}
@@ -348,10 +348,10 @@ void StartScene::Render(const float& _dtRatio) {
 	if (canRender)
 	{
 		//Wait for Queue to be ready
-		vkWaitForFences(vkGlobals.device, 1, &sceneFence[frameCurrent], VK_TRUE, ~(static_cast<uint64_t>(0)));
+		vkWaitForFences(vkGlobal.device, 1, &sceneFence[frameCurrent], VK_TRUE, ~(static_cast<uint64_t>(0)));
 
 		//Get the Frame Result
-		VkResult frame_result = vkAcquireNextImageKHR(vkGlobals.device, swapchain, ~(0ull), sceneSemaphoreIA[frameCurrent], VK_NULL_HANDLE, &frameCurrent);
+		VkResult frame_result = vkAcquireNextImageKHR(vkGlobal.device, swapchain, ~(0ull), sceneSemaphoreIA[frameCurrent], VK_NULL_HANDLE, &frameCurrent);
 
 		//Create the Command Buffer's Begin Info
 		VkCommandBufferBeginInfo command_buffer_begin_info = {};
@@ -397,11 +397,11 @@ void StartScene::Render(const float& _dtRatio) {
 		submit_info.pSignalSemaphores = signal_semaphore;
 
 		//Reset the Fence
-		vkResetFences(vkGlobals.device, 1, &sceneFence[frameCurrent]);
+		vkResetFences(vkGlobal.device, 1, &sceneFence[frameCurrent]);
 
 		//Submit Queue <--Something to come back to.
 		VkResult r;
-		r = vkQueueSubmit(vkGlobals.queueGraphics, 1, &submit_info, sceneFence[frameCurrent]);
+		r = vkQueueSubmit(vkGlobal.queueGraphics, 1, &submit_info, sceneFence[frameCurrent]);
 		if (r) {
 			VK_ASSERT(r);
 		}
@@ -418,7 +418,7 @@ void StartScene::Render(const float& _dtRatio) {
 		present_info.pResults = nullptr;
 
 		//Present onto the surface
-		frame_result = vkQueuePresentKHR(vkGlobals.queuePresent, &present_info);
+		frame_result = vkQueuePresentKHR(vkGlobal.queuePresent, &present_info);
 
 		//Error Check for Swapchain and VSync Changes
 		if (frame_result == VK_ERROR_OUT_OF_DATE_KHR || frame_result == VK_SUBOPTIMAL_KHR) {
@@ -444,7 +444,7 @@ void StartScene::Initialize() {
 	UpdateSurfaceData();
 
 	//2: Setup Default Parameters
-	surfaceCapabilities = vkGlobals.surfaceCapabilities;
+	surfaceCapabilities = vkGlobal.surfaceCapabilities;
 	surfacePresentMode = VK_PRESENT_MODE_FIFO_KHR; //Default
 	surfaceExtent2D = surfaceCapabilities.currentExtent;
 	surfaceExtent3D = { surfaceExtent2D.width, surfaceExtent2D.height, 1 };
@@ -464,13 +464,13 @@ void StartScene::Initialize() {
 
 void StartScene::Cleanup() {
 	//Wait for device
-	if (vkGlobals.device)
-		vkDeviceWaitIdle(vkGlobals.device);
+	if (vkGlobal.device)
+		vkDeviceWaitIdle(vkGlobal.device);
 
 	//Remove Fence
 	if (sceneFence.size()) {
 		for (auto fence : sceneFence) {
-			vkDestroyFence(vkGlobals.device, fence, VK_NULL_HANDLE);
+			vkDestroyFence(vkGlobal.device, fence, VK_NULL_HANDLE);
 		}
 		sceneFence.clear();
 		sceneFence.shrink_to_fit();
@@ -479,7 +479,7 @@ void StartScene::Cleanup() {
 	//Remove Semaphore Render Finished
 	if (sceneSemaphoreRF.size()) {
 		for (auto semaphore : sceneSemaphoreRF) {
-			vkDestroySemaphore(vkGlobals.device, semaphore, VK_NULL_HANDLE);
+			vkDestroySemaphore(vkGlobal.device, semaphore, VK_NULL_HANDLE);
 		}
 		sceneSemaphoreRF.clear();
 		sceneSemaphoreRF.shrink_to_fit();
@@ -488,7 +488,7 @@ void StartScene::Cleanup() {
 	//Remove Semaphore Image Available
 	if (sceneSemaphoreIA.size()) {
 		for (auto semaphore : sceneSemaphoreIA) {
-			vkDestroySemaphore(vkGlobals.device, semaphore, VK_NULL_HANDLE);
+			vkDestroySemaphore(vkGlobal.device, semaphore, VK_NULL_HANDLE);
 		}
 		sceneSemaphoreIA.clear();
 		sceneSemaphoreIA.shrink_to_fit();
@@ -496,7 +496,7 @@ void StartScene::Cleanup() {
 
 	//Remove Command Pool
 	if (commandPool) {
-		vkDestroyCommandPool(vkGlobals.device, commandPool, VK_NULL_HANDLE);
+		vkDestroyCommandPool(vkGlobal.device, commandPool, VK_NULL_HANDLE);
 		commandPool = {};
 		commandBuffer.clear();
 		commandBuffer.shrink_to_fit();
@@ -505,7 +505,7 @@ void StartScene::Cleanup() {
 	//Remove Framebuffer
 	if (swapchainFramebuffer.size()) {
 		for (auto framebuffer : swapchainFramebuffer) {
-			vkDestroyFramebuffer(vkGlobals.device, framebuffer, VK_NULL_HANDLE);
+			vkDestroyFramebuffer(vkGlobal.device, framebuffer, VK_NULL_HANDLE);
 		}
 		swapchainFramebuffer.clear();
 		swapchainFramebuffer.shrink_to_fit();
@@ -513,14 +513,14 @@ void StartScene::Cleanup() {
 
 	//Remove Renderpass
 	if (renderPass) {
-		vkDestroyRenderPass(vkGlobals.device, renderPass, VK_NULL_HANDLE);
+		vkDestroyRenderPass(vkGlobal.device, renderPass, VK_NULL_HANDLE);
 		renderPass = {};
 	}
 
 	//Remove Swapchain Image Views
 	if (swapchainImageView.size()) {
 		for (auto imageView : swapchainImageView) {
-			vkDestroyImageView(vkGlobals.device, imageView, VK_NULL_HANDLE);
+			vkDestroyImageView(vkGlobal.device, imageView, VK_NULL_HANDLE);
 		}
 		swapchainImageView.clear();
 		swapchainImageView.shrink_to_fit();
@@ -528,7 +528,7 @@ void StartScene::Cleanup() {
 
 	//Remove Swapchain
 	if (swapchain) {
-		vkDestroySwapchainKHR(vkGlobals.device, swapchain, VK_NULL_HANDLE);
+		vkDestroySwapchainKHR(vkGlobal.device, swapchain, VK_NULL_HANDLE);
 		swapchain = {};
 		swapchainImage.clear();
 		swapchainImage.shrink_to_fit();
