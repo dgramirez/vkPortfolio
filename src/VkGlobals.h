@@ -54,10 +54,18 @@ struct ImGuiGlobal {
 	ImGui_ImplVulkan_InitInfo init_info = {};
 	VkPipelineCache pipelineCache;
 	VkDescriptorPool descriptorPool;
-	VkRenderPass renderPass;
 
 	VkCommandPool commandPool;
-	VkCommandBuffer commandBuffer;
+	std::vector<VkCommandBuffer> commandBuffer;
+
+	VkImage image;
+	VkDeviceMemory memory;
+	VkImageView imageView;
+	VkRenderPass renderPass;
+	VkFramebuffer frameBuffer;
+
+	std::vector<VkFence> fence;
+	std::vector<VkSemaphore> semaphore;
 
 	static void check_vk_result(VkResult err);
 	static VkResult Init_vkImGui();

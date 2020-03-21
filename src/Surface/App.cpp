@@ -107,7 +107,6 @@ namespace App {
 				ratio = accumulator / dt;
 
 				//Render
-				CurrentScene->RenderImGui();
 				CurrentScene->Render(ratio);
 			}
 		}

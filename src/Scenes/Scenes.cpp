@@ -183,7 +183,7 @@ VkResult Scene::CreateRenderPass(const bool& _depth, const bool& _msaa, const Vk
 	if (_msaa) {
 		color_attachment_resolve.format = surfaceFormat.format;
 		color_attachment_resolve.samples = VK_SAMPLE_COUNT_1_BIT;
-		color_attachment_resolve.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		color_attachment_resolve.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		color_attachment_resolve.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 		color_attachment_resolve.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		color_attachment_resolve.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -333,6 +333,86 @@ VkResult Scene::CreateSyncPreset()
 	return r;
 }
 
+void Scene::FrameStart(const VkCommandBuffer & _commandBuffer, const VkRenderPass& _renderPass, const VkFramebuffer& _frameBuffer) {
+	//Create the Command Buffer's Begin Info
+	VkCommandBufferBeginInfo command_buffer_begin_info = {};
+	command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	command_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+	command_buffer_begin_info.pInheritanceInfo = nullptr;
+	vkBeginCommandBuffer(_commandBuffer, &command_buffer_begin_info);
+
+	//Setup Clear Color
+	VkClearValue clear_value = { 0.098f, .098f, .439f, 1.0f };
+
+	//Setup the Render Pass
+	VkRenderPassBeginInfo render_pass_begin_info = {};
+	render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	render_pass_begin_info.renderPass = _renderPass;
+	render_pass_begin_info.framebuffer = _frameBuffer; //swapchainFramebuffer[frameCurrent]
+	render_pass_begin_info.renderArea.extent = surfaceExtent2D;
+	render_pass_begin_info.clearValueCount = 1;
+	render_pass_begin_info.pClearValues = &clear_value;
+
+	//Begin the Render Pass
+	vkCmdBeginRenderPass(_commandBuffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+}
+void Scene::FrameEnd(const VkCommandBuffer& _commandBuffer, const VkSemaphore& _startSemaphore, const VkSemaphore& _nextSemaphore, const VkFence& _fence) {
+	//Stop the Render Pass
+	vkCmdEndRenderPass(_commandBuffer);
+	vkEndCommandBuffer(_commandBuffer);
+
+	//Setup the Semaphores and Command Buffer to be sent into Queue Submit
+	VkPipelineStageFlags wait_stages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+	//Setup the Queue Submit Info
+	VkSubmitInfo submit_info = {};
+	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submit_info.waitSemaphoreCount = 1;
+	submit_info.pWaitSemaphores = &_startSemaphore;
+	submit_info.pWaitDstStageMask = &wait_stages;
+	submit_info.commandBufferCount = 1;
+	submit_info.pCommandBuffers = &_commandBuffer;
+	submit_info.signalSemaphoreCount = 1;
+	submit_info.pSignalSemaphores = &_nextSemaphore;
+
+	//Reset the Fence
+	vkWaitForFences(vkGlobal.device, 1, &_fence, VK_TRUE, ~(static_cast<uint64_t>(0)));
+	vkResetFences(vkGlobal.device, 1, &_fence);
+
+	//Submit Queue <--Something to come back to.
+	VkResult r;
+	r = vkQueueSubmit(vkGlobal.queueGraphics, 1, &submit_info, _fence);
+	if (r) {
+		VK_ASSERT(r);
+	}
+
+}
+void Scene::Present() {
+	//Setup the Present Info
+	VkPresentInfoKHR present_info = {};
+	present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	present_info.waitSemaphoreCount = 1;
+	present_info.pWaitSemaphores = &sceneSemaphoreRF[frameCurrent];
+	present_info.swapchainCount = 1;
+	present_info.pSwapchains = &vkGlobal.swapchain;
+	present_info.pImageIndices = &frameCurrent;
+	present_info.pResults = nullptr;
+
+	//Present onto the surface
+	VkResult frame_result = vkQueuePresentKHR(vkGlobal.queuePresent, &present_info);
+
+	//Error Check for Swapchain and VSync Changes
+	if (frame_result == VK_ERROR_OUT_OF_DATE_KHR || frame_result == VK_SUBOPTIMAL_KHR) {
+		VK_ASSERT(frame_result);
+	}
+	else if (frame_result) {
+		VK_ASSERT(frame_result);
+	}
+
+	//Go to the next frame
+	frameCurrent = (frameCurrent + 1) % frameMax;
+}
+
 /////////////////////////
 // Start Scene Methods //
 /////////////////////////
@@ -345,93 +425,27 @@ StartScene::~StartScene() {
 }
 
 void StartScene::Render(const float& _dtRatio) {
+
 	if (canRender)
 	{
 		//Wait for Queue to be ready
 		vkWaitForFences(vkGlobal.device, 1, &sceneFence[frameCurrent], VK_TRUE, ~(static_cast<uint64_t>(0)));
 
 		//Get the Frame Result
-		VkResult frame_result = vkAcquireNextImageKHR(vkGlobal.device, swapchain, ~(0ull), sceneSemaphoreIA[frameCurrent], VK_NULL_HANDLE, &frameCurrent);
+		VkResult frame_result = vkAcquireNextImageKHR(vkGlobal.device, swapchain, ~(0ull), sceneSemaphoreRF[frameCurrent], VK_NULL_HANDLE, &frameCurrent);
 
-		//Create the Command Buffer's Begin Info
-		VkCommandBufferBeginInfo command_buffer_begin_info = {};
-		command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		command_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-		command_buffer_begin_info.pInheritanceInfo = nullptr;
-		vkBeginCommandBuffer(commandBuffer[frameCurrent], &command_buffer_begin_info);
+		//Render to Texture ImGui
+		FrameStart(vkImGui.commandBuffer[frameCurrent], vkImGui.renderPass, vkImGui.frameBuffer);
+		RenderImGui();
+		FrameEnd(vkImGui.commandBuffer[frameCurrent], sceneSemaphoreRF[frameCurrent], vkImGui.semaphore[frameCurrent], vkImGui.fence[frameCurrent]);
 
-		//Setup Clear Color
-		VkClearValue clear_value = { 0.098f, .098f, .439f, 1.0f };
+		//Render to Swapchain
+		FrameStart(commandBuffer[frameCurrent], renderPass, swapchainFramebuffer[frameCurrent]);
+//		MyStuff
+		FrameEnd(commandBuffer[frameCurrent], vkImGui.semaphore[frameCurrent], sceneSemaphoreRF[frameCurrent], sceneFence[frameCurrent]);
 
-		//Setup the Render Pass
-		VkRenderPassBeginInfo render_pass_begin_info = {};
-		render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		render_pass_begin_info.renderPass = renderPass;
-		render_pass_begin_info.framebuffer = swapchainFramebuffer[frameCurrent];
-		render_pass_begin_info.renderArea.extent = surfaceExtent2D;
-		render_pass_begin_info.clearValueCount = 1;
-		render_pass_begin_info.pClearValues = &clear_value;
-
-		//Begin the Render Pass
-		vkCmdBeginRenderPass(commandBuffer[frameCurrent], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
-
-		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer[frameCurrent]);
-
-		//Stop the Render Pass
-		vkCmdEndRenderPass(commandBuffer[frameCurrent]);
-		vkEndCommandBuffer(commandBuffer[frameCurrent]);
-
-		//Setup the Semaphores and Command Buffer to be sent into Queue Submit
-		VkSemaphore wait_semaphores[] = { sceneSemaphoreIA[frameCurrent] };
-		VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-		VkSemaphore signal_semaphore[] = { sceneSemaphoreRF[frameCurrent] };
-		VkCommandBuffer pCommandBuffer[] = { commandBuffer[frameCurrent] };
-
-		//Setup the Queue Submit Info
-		VkSubmitInfo submit_info = {};
-		submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submit_info.waitSemaphoreCount = 1;
-		submit_info.pWaitSemaphores = wait_semaphores;
-		submit_info.pWaitDstStageMask = wait_stages;
-		submit_info.commandBufferCount = 1;
-		submit_info.pCommandBuffers = pCommandBuffer;
-		submit_info.signalSemaphoreCount = 1;
-		submit_info.pSignalSemaphores = signal_semaphore;
-
-		//Reset the Fence
-		vkResetFences(vkGlobal.device, 1, &sceneFence[frameCurrent]);
-
-		//Submit Queue <--Something to come back to.
-		VkResult r;
-		r = vkQueueSubmit(vkGlobal.queueGraphics, 1, &submit_info, sceneFence[frameCurrent]);
-		if (r) {
-			VK_ASSERT(r);
-		}
-
-		//Setup the Present Info
-		VkSwapchainKHR swapchains[] = { swapchain };
-		VkPresentInfoKHR present_info = {};
-		present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-		present_info.waitSemaphoreCount = 1;
-		present_info.pWaitSemaphores = signal_semaphore;
-		present_info.swapchainCount = 1;
-		present_info.pSwapchains = swapchains;
-		present_info.pImageIndices = &frameCurrent;
-		present_info.pResults = nullptr;
-
-		//Present onto the surface
-		frame_result = vkQueuePresentKHR(vkGlobal.queuePresent, &present_info);
-
-		//Error Check for Swapchain and VSync Changes
-		if (frame_result == VK_ERROR_OUT_OF_DATE_KHR || frame_result == VK_SUBOPTIMAL_KHR) {
-			VK_ASSERT(frame_result);
-		}
-		else if (frame_result) {
-			VK_ASSERT(frame_result);
-		}
-
-		//Go to the next frame
-		frameCurrent = (frameCurrent + 1) % frameMax;
+		//Present
+		Present();
 	}
 }
 void StartScene::RenderImGui() {
@@ -442,10 +456,15 @@ void StartScene::RenderImGui() {
 	ImGui::Begin("Test Menu");
 	ImGui::Checkbox("Show About Window", &yes);
 	ImGui::ShowDemoWindow(&yes);
-	ImGui::End();
-	
-	ImGui::Render();
 
+	bool leave = ImGui::Button("Exit");
+	if (leave)
+		ImGui_ImplGateware_Shutdown();
+	ImGui::End();
+
+	//Set to Render
+	ImGui::Render();
+	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vkImGui.commandBuffer[frameCurrent]);
 }
 
 void StartScene::Initialize() {
@@ -464,6 +483,7 @@ void StartScene::Initialize() {
 	//3: Create Swapchain, Renderpass & Framebuffers
 	CreateSwapchainPresetBasic();
 	vkGlobal.frameMax = frameMax;
+	vkGlobal.swapchain = swapchain;
 
 	//4: Create Command Pool & Buffers
 	CreateCommandPreset();

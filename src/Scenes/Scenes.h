@@ -8,7 +8,6 @@ public:
 
 	virtual void Update(const float& _dt) {}
 	virtual void Render(const float& _dtRatio) {}
-	virtual void RenderImGui() {}
 
 	virtual void Cleanup() {}
 
@@ -43,6 +42,11 @@ protected:
 
 	VkResult CreateCommandPreset();
 	VkResult CreateSyncPreset();
+
+	void FrameStart(const VkCommandBuffer& _commandBuffer, const VkRenderPass& _renderPass, const VkFramebuffer& _frameBuffer);
+	void FrameEnd(const VkCommandBuffer& _commandBuffer, const VkSemaphore& _startSemaphore, const VkSemaphore& _nextSemaphore, const VkFence& _fence);
+	virtual void Present();
+	virtual void RenderImGui() {}
 private:
 	VkResult CreateSwapchain();
 	VkResult CreateRenderPass(const bool& _depth = false, const bool& _msaa = false, const VkFormat& _depthFormat = VK_FORMAT_UNDEFINED);
@@ -75,6 +79,7 @@ public:
 
 	void Initialize();
 	void Cleanup() override;
+
 private:
 	bool canRender = true;
 	bool yes = true;

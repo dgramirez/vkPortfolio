@@ -86,9 +86,7 @@ VkResult VkGlobal::CreateImageView(const VkImage& _image, const VkFormat& _forma
 	return r;
 }
 
-VkResult ImGuiGlobal::Init_vkImGui()
-{
-	//Prereq: Descriptor Pool
+VkResult SetupDescriptorPool() {
 	VkDescriptorPoolSize pool_sizes[] =
 	{
 		{ VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
@@ -109,23 +107,9 @@ VkResult ImGuiGlobal::Init_vkImGui()
 	pool_info.maxSets = 1000 * IM_ARRAYSIZE(pool_sizes);
 	pool_info.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
 	pool_info.pPoolSizes = pool_sizes;
-	VkResult r = vkCreateDescriptorPool(vkGlobal.device, &pool_info, VK_NULL_HANDLE, &vkImGui.descriptorPool);
-
-	//Setup the initinfo
-	ImGui_ImplVulkan_InitInfo init_info = {};
-	init_info.Instance = vkGlobal.instance;
-	init_info.PhysicalDevice = vkGlobal.physicalDevice;
-	init_info.Device = vkGlobal.device;
-	init_info.QueueFamily = vkGlobal.GRAPHICS_INDEX;
-	init_info.Queue = vkGlobal.queueGraphics;
-	init_info.PipelineCache = vkImGui.pipelineCache;
-	init_info.DescriptorPool = vkImGui.descriptorPool;
-	init_info.Allocator = VK_NULL_HANDLE;
-	init_info.MinImageCount = vkGlobal.surfaceCapabilities.minImageCount;
-	init_info.ImageCount = vkGlobal.frameMax;
-	init_info.CheckVkResultFn = check_vk_result;
-	init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
-
+	return vkCreateDescriptorPool(vkGlobal.device, &pool_info, VK_NULL_HANDLE, &vkImGui.descriptorPool);
+}
+VkResult SetupRenderPass() {
 	//Primary Swapchain Description and Swapchain
 	VkAttachmentDescription color_attachment_description = {};
 	color_attachment_description.format = VK_FORMAT_B8G8R8A8_UNORM;
@@ -135,7 +119,7 @@ VkResult ImGuiGlobal::Init_vkImGui()
 	color_attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	color_attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	color_attachment_description.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	color_attachment_description.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	color_attachment_description.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 	VkAttachmentReference color_attachment_reference = {};
 	color_attachment_reference.attachment = 0;
@@ -165,59 +149,155 @@ VkResult ImGuiGlobal::Init_vkImGui()
 	render_pass_create_info.dependencyCount = 1;
 	render_pass_create_info.pDependencies = &subpass_dependency;
 
-	r = vkCreateRenderPass(vkGlobal.device, &render_pass_create_info, nullptr, &vkImGui.renderPass);
+	return vkCreateRenderPass(vkGlobal.device, &render_pass_create_info, nullptr, &vkImGui.renderPass);
+}
+VkResult SetupCommandObjects() {
+	//Setup ImGui's Command Pool & Buffer
+	VkCommandPoolCreateInfo cpool_create_info = {};
+	cpool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	cpool_create_info.queueFamilyIndex = vkGlobal.GRAPHICS_INDEX;
+	cpool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+	cpool_create_info.pNext = VK_NULL_HANDLE;
+	vkCreateCommandPool(vkGlobal.device, &cpool_create_info, VK_NULL_HANDLE, &vkImGui.commandPool);
+
+	//Allocate Command buffer Information
+	vkImGui.commandBuffer.resize(vkGlobal.frameMax);
+	VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
+	command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	command_buffer_allocate_info.commandPool = vkImGui.commandPool;
+	command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	command_buffer_allocate_info.commandBufferCount = 2;
+
+	return vkAllocateCommandBuffers(vkGlobal.device, &command_buffer_allocate_info, vkImGui.commandBuffer.data());
+}
+VkResult SetupFonts() {
+	// Use any command queue
+	VkResult err = vkResetCommandPool(vkGlobal.device, vkImGui.commandPool, 0);
+	ImGuiGlobal::check_vk_result(err);
+	VkCommandBufferBeginInfo begin_info = {};
+	begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	err = vkBeginCommandBuffer(vkImGui.commandBuffer[0], &begin_info);
+	ImGuiGlobal::check_vk_result(err);
+
+	ImGui_ImplVulkan_CreateFontsTexture(vkImGui.commandBuffer[0]);
+
+	VkSubmitInfo end_info = {};
+	end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	end_info.commandBufferCount = 1;
+	end_info.pCommandBuffers = &vkImGui.commandBuffer[0];
+	err = vkEndCommandBuffer(vkImGui.commandBuffer[0]);
+	ImGuiGlobal::check_vk_result(err);
+	err = vkQueueSubmit(vkGlobal.queueGraphics, 1, &end_info, VK_NULL_HANDLE);
+	ImGuiGlobal::check_vk_result(err);
+
+	err = vkDeviceWaitIdle(vkGlobal.device);
+	ImGuiGlobal::check_vk_result(err);
+	ImGui_ImplVulkan_DestroyFontUploadObjects();
+	err = vkResetCommandPool(vkGlobal.device, vkImGui.commandPool, 0);
+
+	return err;
+}
+VkResult SetupImage() {
+	VkExtent3D ext = {
+		vkGlobal.surfaceCapabilities.currentExtent.width,
+		vkGlobal.surfaceCapabilities.currentExtent.height,
+		1
+	};
+	VkResult r = VkGlobal::CreateImage(VK_FORMAT_B8G8R8A8_UNORM, ext, vkGlobal.msaa, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &vkImGui.image, &vkImGui.memory);
+	r = VkGlobal::CreateImageView(vkImGui.image, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, &vkImGui.imageView);
+	return VK_SUCCESS;
+}
+VkResult SetupFrameBuffer() {
+	//Setup Variables
+	VkResult r;
+
+	//Frame Buffer's Create Info
+	VkFramebufferCreateInfo frame_buffer_create_info = {};
+	frame_buffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+	frame_buffer_create_info.renderPass = vkImGui.renderPass;
+	frame_buffer_create_info.attachmentCount = 1;
+	frame_buffer_create_info.pAttachments = &vkImGui.imageView;
+	frame_buffer_create_info.width = vkGlobal.surfaceCapabilities.currentExtent.width;
+	frame_buffer_create_info.height = vkGlobal.surfaceCapabilities.currentExtent.height;
+	frame_buffer_create_info.layers = 1;
+
+	//Create the Surface (With Results) [VK_SUCCESS = 0]
+	r = vkCreateFramebuffer(vkGlobal.device, &frame_buffer_create_info, nullptr, &vkImGui.frameBuffer);
+
+	return r;
+}
+VkResult SetupSyncObjects() {
+	//Semaphore Info Create
+	VkSemaphoreCreateInfo semaphore_create_info = {};
+	semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+	//Fence Info Create
+	VkFenceCreateInfo fence_create_info = {};
+	fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+	//Resize Semaphores
+	vkImGui.fence.resize(vkGlobal.frameMax);
+	vkImGui.semaphore.resize(vkGlobal.frameMax);
+
+	//Create the Semaphores and Fences
+	VkResult r;
+	for (unsigned int i = 0; i < vkGlobal.frameMax; ++i) {
+		r = vkCreateSemaphore(vkGlobal.device, &semaphore_create_info, nullptr, &vkImGui.semaphore[i]);
+		if (r) {
+			return r;
+		}
+		r = vkCreateFence(vkGlobal.device, &fence_create_info, nullptr, &vkImGui.fence[i]);
+		if (r) {
+			return r;
+		}
+	}
+
+	//Semaphores and Fences has been created successfully!
+	return r;
+}
+VkResult ImGuiGlobal::Init_vkImGui()
+{
+	//Prereq: Descriptor Pool
+	SetupDescriptorPool();
+	SetupRenderPass();
+
+	//Setup the initinfo
+	ImGui_ImplVulkan_InitInfo init_info = {};
+	init_info.Instance = vkGlobal.instance;
+	init_info.PhysicalDevice = vkGlobal.physicalDevice;
+	init_info.Device = vkGlobal.device;
+	init_info.QueueFamily = vkGlobal.GRAPHICS_INDEX;
+	init_info.Queue = vkGlobal.queueGraphics;
+	init_info.PipelineCache = vkImGui.pipelineCache;
+	init_info.DescriptorPool = vkImGui.descriptorPool;
+	init_info.Allocator = VK_NULL_HANDLE;
+	init_info.MinImageCount = vkGlobal.surfaceCapabilities.minImageCount;
+	init_info.ImageCount = vkGlobal.frameMax;
+	init_info.CheckVkResultFn = check_vk_result;
+	init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
 	//Initialize ImGui - Vulkan
 	if (!ImGui_ImplVulkan_Init(&init_info, vkImGui.renderPass)) {
 		VK_ASSERT(VK_ERROR_FEATURE_NOT_PRESENT);
 		return VK_ERROR_FEATURE_NOT_PRESENT;
 	}
-	
-	//Setup ImGui's Command Pool & Buffer
-	VkCommandPoolCreateInfo cpool_create_info = {};
-	cpool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-	cpool_create_info.queueFamilyIndex = vkGlobal.GRAPHICS_INDEX;
-	cpool_create_info.flags = VK_NULL_HANDLE;
-	cpool_create_info.pNext = VK_NULL_HANDLE;
-	vkCreateCommandPool(vkGlobal.device, &cpool_create_info, VK_NULL_HANDLE, &vkImGui.commandPool);
 
-	//Allocate Command buffer Information
-	VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
-	command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	command_buffer_allocate_info.commandPool = vkImGui.commandPool;
-	command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	command_buffer_allocate_info.commandBufferCount = 1;
+	//Setup Command Objects
+	SetupCommandObjects();
 
-	vkAllocateCommandBuffers(vkGlobal.device, &command_buffer_allocate_info, &vkImGui.commandBuffer);
+	//Setup ImGui Font
+	SetupFonts();
 
-	// Upload Fonts
-	{
-		// Use any command queue
+	//Setup Image
+	SetupImage();
 
-		VkResult err = vkResetCommandPool(vkGlobal.device, vkImGui.commandPool, 0);
-		check_vk_result(err);
-		VkCommandBufferBeginInfo begin_info = {};
-		begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-		err = vkBeginCommandBuffer(vkImGui.commandBuffer, &begin_info);
-		check_vk_result(err);
+	//Setup Framebuffer
+	SetupFrameBuffer();
 
-		ImGui_ImplVulkan_CreateFontsTexture(vkImGui.commandBuffer);
-
-		VkSubmitInfo end_info = {};
-		end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		end_info.commandBufferCount = 1;
-		end_info.pCommandBuffers = &vkImGui.commandBuffer;
-		err = vkEndCommandBuffer(vkImGui.commandBuffer);
-		check_vk_result(err);
-		err = vkQueueSubmit(vkGlobal.queueGraphics, 1, &end_info, VK_NULL_HANDLE);
-		check_vk_result(err);
-
-		err = vkDeviceWaitIdle(vkGlobal.device);
-		check_vk_result(err);
-		ImGui_ImplVulkan_DestroyFontUploadObjects();
-		err = vkResetCommandPool(vkGlobal.device, vkImGui.commandPool, 0);
-	}
+	//Setup Sync Objects
+	SetupSyncObjects();
 
 	return VK_SUCCESS;
 }
