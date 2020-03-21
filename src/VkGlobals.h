@@ -42,7 +42,9 @@ struct VkGlobal {
 	VkSurfaceCapabilitiesKHR surfaceCapabilities = {};
 	std::vector<VkSurfaceFormatKHR> surfaceFormatsAll;
 	std::vector<VkPresentModeKHR> surfacePresentModesAll;
+	uint32_t frameMax;
 
+	//Helper Methods
 	static VkResult CreateImage(const VkFormat& _format, const VkExtent3D& _imageExtent, const VkSampleCountFlagBits& _samples, const VkImageTiling& _tiling, const VkImageUsageFlags& _usageFlags, const VkMemoryPropertyFlags& _memoryPropertyFlags, VkImage* _outImage, VkDeviceMemory* _outImageMemory);
 	static VkResult CreateImageView(const VkImage& _image, const VkFormat& _format, const VkImageAspectFlags& _imageAspectFlags, VkImageView* _outImageView);
 	};
@@ -50,6 +52,15 @@ extern VkGlobal vkGlobal;
 
 struct ImGuiGlobal {
 	ImGui_ImplVulkan_InitInfo init_info = {};
+	VkPipelineCache pipelineCache;
+	VkDescriptorPool descriptorPool;
+	VkRenderPass renderPass;
+
+	VkCommandPool commandPool;
+	VkCommandBuffer commandBuffer;
+
+	static void check_vk_result(VkResult err);
+	static VkResult Init_vkImGui();
 };
 extern ImGuiGlobal vkImGui;
 

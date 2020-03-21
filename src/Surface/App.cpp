@@ -66,6 +66,7 @@ namespace App {
 			//Setup Menus
 			CurrentScene = new StartScene();
 			Menu = new SceneMenu(CurrentScene);
+			ImGuiGlobal::Init_vkImGui();
 
 			//Setup Time
 			double t = 0.0;
@@ -93,7 +94,7 @@ namespace App {
 				//Delta Time Loop
 				while (accumulator >= dt) {
 					//Update
-//					ImGui_ImplGateware_NewFrame(dt);
+					ImGui_ImplGateware_NewFrame(dt);
 
 					//Decrement Accumulator
 					accumulator -= dt;
@@ -106,8 +107,8 @@ namespace App {
 				ratio = accumulator / dt;
 
 				//Render
-				CurrentScene->Render(ratio);
 				CurrentScene->RenderImGui();
+				CurrentScene->Render(ratio);
 			}
 		}
 	}

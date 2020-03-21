@@ -375,6 +375,8 @@ void StartScene::Render(const float& _dtRatio) {
 		//Begin the Render Pass
 		vkCmdBeginRenderPass(commandBuffer[frameCurrent], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
+		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer[frameCurrent]);
+
 		//Stop the Render Pass
 		vkCmdEndRenderPass(commandBuffer[frameCurrent]);
 		vkEndCommandBuffer(commandBuffer[frameCurrent]);
@@ -433,10 +435,17 @@ void StartScene::Render(const float& _dtRatio) {
 	}
 }
 void StartScene::RenderImGui() {
-	//ImGui::Begin("Test Menu");
-	//ImGui::Checkbox("Show About Window", &yes);
-	//ImGui::ShowAboutWindow(&yes);
-	//ImGui::End();
+	// Start the Dear ImGui frame
+	ImGui_ImplVulkan_NewFrame();
+	ImGui::NewFrame();
+
+	ImGui::Begin("Test Menu");
+	ImGui::Checkbox("Show About Window", &yes);
+	ImGui::ShowDemoWindow(&yes);
+	ImGui::End();
+	
+	ImGui::Render();
+
 }
 
 void StartScene::Initialize() {
@@ -454,6 +463,7 @@ void StartScene::Initialize() {
 
 	//3: Create Swapchain, Renderpass & Framebuffers
 	CreateSwapchainPresetBasic();
+	vkGlobal.frameMax = frameMax;
 
 	//4: Create Command Pool & Buffers
 	CreateCommandPreset();

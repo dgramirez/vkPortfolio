@@ -30,6 +30,12 @@ bool	ImGui_ImplGateware_Init(void* gwindow)
 	io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
 	io.BackendPlatformName = "imgui_impl_gateware";
 
+	//Get Width and Heigh
+	uint32_t w, h;
+	g_GWindow.GetClientWidth(w);
+	g_GWindow.GetClientHeight(h);
+	io.DisplaySize = ImVec2((float)w, (float)h);
+
 	// Keyboard mapping. ImGui will use those indices to peek into the io.KeysDown[] array that we will update during the application lifetime.
 	io.KeyMap[ImGuiKey_Tab] = G_KEY_TAB;
 	io.KeyMap[ImGuiKey_LeftArrow] = G_KEY_LEFT;
