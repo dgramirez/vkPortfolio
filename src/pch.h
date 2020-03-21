@@ -35,4 +35,7 @@
 #define GATEWARE_ENABLE_SYSTEM
 #define GATEWARE_ENABLE_INPUT
 #include "../dep/Gateware/Gateware.h"
+
+//Gateware + ImGui
+#include "Surface/imgui_impl_gateware.h"
 #endif
