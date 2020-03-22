@@ -1,5 +1,48 @@
 #include "VkGlobals.h"
 
+//Vulkan Objects
+VkInstance VkGlobal::instance = {};
+VkSurfaceKHR VkGlobal::surface = {};
+VkPhysicalDevice VkGlobal::physicalDevice = {};
+VkSampleCountFlagBits VkGlobal::msaa = VK_SAMPLE_COUNT_1_BIT;
+VkDevice VkGlobal::device = {};
+VmaAllocator VkGlobal::allocator = {};
+VkSwapchainKHR VkGlobal::swapchain = {};
+VkRenderPass VkGlobal::renderPass = {};
+
+//Queue Family Info
+uint16_t VkGlobal::GRAPHICS_INDEX = 0; VkQueue VkGlobal::queueGraphics = {};
+uint16_t VkGlobal::PRESENT_INDEX = 0;  VkQueue VkGlobal::queuePresent = {};
+uint16_t VkGlobal::COMPUTE_INDEX = 0;  VkQueue VkGlobal::queueCompute = {};
+uint16_t VkGlobal::TRANSFER_INDEX = 0; VkQueue VkGlobal::queueTransfer = {};
+std::vector<uint32_t> VkGlobal::uniqueIndices;
+
+//Vulkan Debug Objects
+VkDebugReportCallbackEXT VkGlobal::debugReportCallback = {};
+
+//Vulkan Extensions & Layers that are Active
+std::vector<const char*> VkGlobal::instanceExtensionsActive;
+std::vector<const char*> VkGlobal::instanceLayersActive;
+std::vector<const char*> VkGlobal::deviceExtensionsActive;
+
+//Vulkan ALL Extensions & Layers
+std::vector<VkExtensionProperties> VkGlobal::instanceExtensionsAll;
+std::vector<VkLayerProperties> VkGlobal::instanceLayersAll;
+std::vector<VkPhysicalDevice> VkGlobal::physicalDeviceAll;
+
+//Vulkan Physical Device Properties
+std::unordered_map<VkPhysicalDevice,std::vector<VkExtensionProperties>> VkGlobal::physicalDeviceExtensionsAll;
+std::unordered_map<VkPhysicalDevice,std::vector<VkQueueFamilyProperties>> VkGlobal::physicalDeviceQueueFamilyPropertiesAll;
+std::unordered_map<VkPhysicalDevice, VkPhysicalDeviceFeatures> VkGlobal::physicalDeviceFeaturesAll;
+std::unordered_map<VkPhysicalDevice, VkPhysicalDeviceProperties> VkGlobal::physicalDevicePropertiesAll;
+std::unordered_map<VkPhysicalDevice, VkPhysicalDeviceMemoryProperties> VkGlobal::physicalDeviceMemoryPropertiesAll;
+
+//Vulkan Surface Properties
+VkSurfaceCapabilitiesKHR VkGlobal::surfaceCapabilities = {};
+std::vector<VkSurfaceFormatKHR> VkGlobal::surfaceFormatsAll;
+std::vector<VkPresentModeKHR> VkGlobal::surfacePresentModesAll;
+uint32_t VkGlobal::frameMax;
+
 ImGuiGlobal vkImGui;
 
 VkResult VkGlobal::CreateImage(const VkFormat& _format, const VkExtent3D& _imageExtent, const VkSampleCountFlagBits& _samples, const VkImageTiling& _tiling, const VkImageUsageFlags& _usageFlags, const VkMemoryPropertyFlags& _memoryPropertyFlags, VkImage* _outImage, VkDeviceMemory* _outImageMemory)
@@ -20,14 +63,14 @@ VkResult VkGlobal::CreateImage(const VkFormat& _format, const VkExtent3D& _image
 	create_info.flags = 0;
 
 	//Create the image
-	VkResult r = vkCreateImage(vkGlobal.device, &create_info, VK_NULL_HANDLE, _outImage);
+	VkResult r = vkCreateImage(VkGlobal::device, &create_info, VK_NULL_HANDLE, _outImage);
 	if (r) return r;
 
 	//Gather Memory Information from image & Physical Device
 	VkMemoryRequirements memory_requirements;
-	vkGetImageMemoryRequirements(vkGlobal.device, *_outImage, &memory_requirements);
+	vkGetImageMemoryRequirements(VkGlobal::device, *_outImage, &memory_requirements);
 	VkPhysicalDeviceMemoryProperties memory_properties;
-	vkGetPhysicalDeviceMemoryProperties(vkGlobal.physicalDevice, &memory_properties);
+	vkGetPhysicalDeviceMemoryProperties(VkGlobal::physicalDevice, &memory_properties);
 
 	//Loop through the memory type count and see if there is a match with both the filter and property flags
 	int32_t memory_type_index = -1;
@@ -48,17 +91,17 @@ VkResult VkGlobal::CreateImage(const VkFormat& _format, const VkExtent3D& _image
 	memory_allocate_info.memoryTypeIndex = memory_type_index;
 
 	//Allocate the memory created
-	r = vkAllocateMemory(vkGlobal.device, &memory_allocate_info, VK_NULL_HANDLE, _outImageMemory);
+	r = vkAllocateMemory(VkGlobal::device, &memory_allocate_info, VK_NULL_HANDLE, _outImageMemory);
 	if (r) {
-		vkDestroyImage(vkGlobal.device, *_outImage, VK_NULL_HANDLE);
+		vkDestroyImage(VkGlobal::device, *_outImage, VK_NULL_HANDLE);
 		return r;
 	}
 
 	//Bind the memory created
-	r = vkBindImageMemory(vkGlobal.device, *_outImage, *_outImageMemory, 0);
+	r = vkBindImageMemory(VkGlobal::device, *_outImage, *_outImageMemory, 0);
 	if (r) {
-		vkDestroyImage(vkGlobal.device, *_outImage, VK_NULL_HANDLE);
-		vkFreeMemory(vkGlobal.device, *_outImageMemory, VK_NULL_HANDLE);
+		vkDestroyImage(VkGlobal::device, *_outImage, VK_NULL_HANDLE);
+		vkFreeMemory(VkGlobal::device, *_outImageMemory, VK_NULL_HANDLE);
 		return r;
 	}
 
@@ -80,7 +123,7 @@ VkResult VkGlobal::CreateImageView(const VkImage& _image, const VkFormat& _forma
 	create_info.subresourceRange.layerCount = 1;
 
 	//Create the Surface (With Results) [VK_SUCCESS = 0]
-	VkResult r = vkCreateImageView(vkGlobal.device, &create_info, nullptr, _outImageView);
+	VkResult r = vkCreateImageView(VkGlobal::device, &create_info, nullptr, _outImageView);
 
 	//Image View has been created successfully, return it
 	return r;
@@ -107,7 +150,7 @@ VkResult SetupDescriptorPool() {
 	pool_info.maxSets = 1000 * IM_ARRAYSIZE(pool_sizes);
 	pool_info.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
 	pool_info.pPoolSizes = pool_sizes;
-	return vkCreateDescriptorPool(vkGlobal.device, &pool_info, VK_NULL_HANDLE, &vkImGui.descriptorPoolImGui);
+	return vkCreateDescriptorPool(VkGlobal::device, &pool_info, VK_NULL_HANDLE, &vkImGui.descriptorPoolImGui);
 }
 VkResult SetupRenderPass() {
 	//Primary Swapchain Description and Swapchain
@@ -149,30 +192,30 @@ VkResult SetupRenderPass() {
 	render_pass_create_info.dependencyCount = 1;
 	render_pass_create_info.pDependencies = &subpass_dependency;
 
-	return vkCreateRenderPass(vkGlobal.device, &render_pass_create_info, nullptr, &vkImGui.renderPass);
+	return vkCreateRenderPass(VkGlobal::device, &render_pass_create_info, nullptr, &vkImGui.renderPass);
 }
 VkResult SetupCommandObjects() {
 	//Setup ImGui's Command Pool & Buffer
 	VkCommandPoolCreateInfo cpool_create_info = {};
 	cpool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-	cpool_create_info.queueFamilyIndex = vkGlobal.GRAPHICS_INDEX;
+	cpool_create_info.queueFamilyIndex = VkGlobal::GRAPHICS_INDEX;
 	cpool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 	cpool_create_info.pNext = VK_NULL_HANDLE;
-	vkCreateCommandPool(vkGlobal.device, &cpool_create_info, VK_NULL_HANDLE, &vkImGui.commandPool);
+	vkCreateCommandPool(VkGlobal::device, &cpool_create_info, VK_NULL_HANDLE, &vkImGui.commandPool);
 
 	//Allocate Command buffer Information
-	vkImGui.commandBuffer.resize(vkGlobal.frameMax);
+	vkImGui.commandBuffer.resize(VkGlobal::frameMax);
 	VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
 	command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	command_buffer_allocate_info.commandPool = vkImGui.commandPool;
 	command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	command_buffer_allocate_info.commandBufferCount = 2;
 
-	return vkAllocateCommandBuffers(vkGlobal.device, &command_buffer_allocate_info, vkImGui.commandBuffer.data());
+	return vkAllocateCommandBuffers(VkGlobal::device, &command_buffer_allocate_info, vkImGui.commandBuffer.data());
 }
 VkResult SetupFonts() {
 	// Use any command queue
-	VkResult err = vkResetCommandPool(vkGlobal.device, vkImGui.commandPool, 0);
+	VkResult err = vkResetCommandPool(VkGlobal::device, vkImGui.commandPool, 0);
 	ImGuiGlobal::check_vk_result(err);
 	VkCommandBufferBeginInfo begin_info = {};
 	begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -188,23 +231,23 @@ VkResult SetupFonts() {
 	end_info.pCommandBuffers = &vkImGui.commandBuffer[0];
 	err = vkEndCommandBuffer(vkImGui.commandBuffer[0]);
 	ImGuiGlobal::check_vk_result(err);
-	err = vkQueueSubmit(vkGlobal.queueGraphics, 1, &end_info, VK_NULL_HANDLE);
+	err = vkQueueSubmit(VkGlobal::queueGraphics, 1, &end_info, VK_NULL_HANDLE);
 	ImGuiGlobal::check_vk_result(err);
 
-	err = vkDeviceWaitIdle(vkGlobal.device);
+	err = vkDeviceWaitIdle(VkGlobal::device);
 	ImGuiGlobal::check_vk_result(err);
 	ImGui_ImplVulkan_DestroyFontUploadObjects();
-	err = vkResetCommandPool(vkGlobal.device, vkImGui.commandPool, 0);
+	err = vkResetCommandPool(VkGlobal::device, vkImGui.commandPool, 0);
 
 	return err;
 }
 VkResult SetupImage() {
 	VkExtent3D ext = {
-		vkGlobal.surfaceCapabilities.currentExtent.width,
-		vkGlobal.surfaceCapabilities.currentExtent.height,
+		VkGlobal::surfaceCapabilities.currentExtent.width,
+		VkGlobal::surfaceCapabilities.currentExtent.height,
 		1
 	};
-	VkResult r = VkGlobal::CreateImage(VK_FORMAT_B8G8R8A8_UNORM, ext, vkGlobal.msaa, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &vkImGui.image, &vkImGui.memory);
+	VkResult r = VkGlobal::CreateImage(VK_FORMAT_B8G8R8A8_UNORM, ext, VkGlobal::msaa, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &vkImGui.image, &vkImGui.memory);
 	r = VkGlobal::CreateImageView(vkImGui.image, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, &vkImGui.imageView);
 	return VK_SUCCESS;
 }
@@ -218,12 +261,12 @@ VkResult SetupFrameBuffer() {
 	frame_buffer_create_info.renderPass = vkImGui.renderPass;
 	frame_buffer_create_info.attachmentCount = 1;
 	frame_buffer_create_info.pAttachments = &vkImGui.imageView;
-	frame_buffer_create_info.width = vkGlobal.surfaceCapabilities.currentExtent.width;
-	frame_buffer_create_info.height = vkGlobal.surfaceCapabilities.currentExtent.height;
+	frame_buffer_create_info.width = VkGlobal::surfaceCapabilities.currentExtent.width;
+	frame_buffer_create_info.height = VkGlobal::surfaceCapabilities.currentExtent.height;
 	frame_buffer_create_info.layers = 1;
 
 	//Create the Surface (With Results) [VK_SUCCESS = 0]
-	r = vkCreateFramebuffer(vkGlobal.device, &frame_buffer_create_info, nullptr, &vkImGui.frameBuffer);
+	r = vkCreateFramebuffer(VkGlobal::device, &frame_buffer_create_info, nullptr, &vkImGui.frameBuffer);
 
 	return r;
 }
@@ -238,17 +281,17 @@ VkResult SetupSyncObjects() {
 	fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
 	//Resize Semaphores
-	vkImGui.fence.resize(vkGlobal.frameMax);
-	vkImGui.semaphore.resize(vkGlobal.frameMax);
+	vkImGui.fence.resize(VkGlobal::frameMax);
+	vkImGui.semaphore.resize(VkGlobal::frameMax);
 
 	//Create the Semaphores and Fences
 	VkResult r;
-	for (unsigned int i = 0; i < vkGlobal.frameMax; ++i) {
-		r = vkCreateSemaphore(vkGlobal.device, &semaphore_create_info, nullptr, &vkImGui.semaphore[i]);
+	for (unsigned int i = 0; i < VkGlobal::frameMax; ++i) {
+		r = vkCreateSemaphore(VkGlobal::device, &semaphore_create_info, nullptr, &vkImGui.semaphore[i]);
 		if (r) {
 			return r;
 		}
-		r = vkCreateFence(vkGlobal.device, &fence_create_info, nullptr, &vkImGui.fence[i]);
+		r = vkCreateFence(VkGlobal::device, &fence_create_info, nullptr, &vkImGui.fence[i]);
 		if (r) {
 			return r;
 		}
@@ -268,7 +311,7 @@ VkResult SetupDescriptors() {
 	dp_create_info.poolSizeCount = 1;
 	dp_create_info.pPoolSizes = &dps;
 	dp_create_info.maxSets = 0xFF;
-	vkCreateDescriptorPool(vkGlobal.device, &dp_create_info, nullptr, &vkImGui.descriptorPool);
+	vkCreateDescriptorPool(VkGlobal::device, &dp_create_info, nullptr, &vkImGui.descriptorPool);
 
 	//Descriptor Set Layout
 	VkDescriptorSetLayoutBinding ps_img = {};
@@ -281,17 +324,17 @@ VkResult SetupDescriptors() {
 	dsl_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 	dsl_create_info.bindingCount = 1;
 	dsl_create_info.pBindings = &ps_img;
-	vkCreateDescriptorSetLayout(vkGlobal.device, &dsl_create_info, nullptr, &vkImGui.descriptorSetLayout);
+	vkCreateDescriptorSetLayout(VkGlobal::device, &dsl_create_info, nullptr, &vkImGui.descriptorSetLayout);
 
 	//Descriptor Sets
-	vkImGui.descriptorSet.resize(vkGlobal.frameMax);
-	std::vector<VkDescriptorSetLayout> dsl_list(vkGlobal.frameMax, vkImGui.descriptorSetLayout);
+	vkImGui.descriptorSet.resize(VkGlobal::frameMax);
+	std::vector<VkDescriptorSetLayout> dsl_list(VkGlobal::frameMax, vkImGui.descriptorSetLayout);
 	VkDescriptorSetAllocateInfo ds_allocate_info = {};
 	ds_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	ds_allocate_info.descriptorSetCount = vkGlobal.frameMax;
+	ds_allocate_info.descriptorSetCount = VkGlobal::frameMax;
 	ds_allocate_info.descriptorPool = vkImGui.descriptorPool;
 	ds_allocate_info.pSetLayouts = &dsl_list[0];
-	vkAllocateDescriptorSets(vkGlobal.device, &ds_allocate_info, vkImGui.descriptorSet.data());
+	vkAllocateDescriptorSets(VkGlobal::device, &ds_allocate_info, vkImGui.descriptorSet.data());
 
 	//Create Sampler
 	VkSamplerCreateInfo sampler_create_info = {};
@@ -302,7 +345,7 @@ VkResult SetupDescriptors() {
 	sampler_create_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 	sampler_create_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 	sampler_create_info.anisotropyEnable = VK_TRUE;
-	sampler_create_info.maxAnisotropy = static_cast<float>(vkGlobal.msaa);
+	sampler_create_info.maxAnisotropy = static_cast<float>(VkGlobal::msaa);
 	sampler_create_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
 	sampler_create_info.unnormalizedCoordinates = VK_FALSE;
 	sampler_create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
@@ -310,9 +353,9 @@ VkResult SetupDescriptors() {
 	sampler_create_info.minLod = 0.0f;
 	sampler_create_info.maxLod = 1.0f;
 
-	vkCreateSampler(vkGlobal.device, &sampler_create_info, nullptr, &vkImGui.sampler);
+	vkCreateSampler(VkGlobal::device, &sampler_create_info, nullptr, &vkImGui.sampler);
 
-	for (uint32_t i = 0; i < vkGlobal.frameMax; ++i)
+	for (uint32_t i = 0; i < VkGlobal::frameMax; ++i)
 	{
 		VkDescriptorImageInfo dii = {};
 		dii.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -331,7 +374,7 @@ VkResult SetupDescriptors() {
 		wds.pTexelBufferView = nullptr;
 		wds.pNext = nullptr;
 
-		vkUpdateDescriptorSets(vkGlobal.device, 1, &wds, 0, nullptr);
+		vkUpdateDescriptorSets(VkGlobal::device, 1, &wds, 0, nullptr);
 	}
 
 	return VK_SUCCESS;
@@ -369,7 +412,7 @@ VkResult SetupPipelines()
 	vsModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 	vsModuleCreateInfo.codeSize = vsFileSize;
 	vsModuleCreateInfo.pCode = reinterpret_cast<const uint32_t*>(tempShaderFile);
-	vkCreateShaderModule(vkGlobal.device, &vsModuleCreateInfo, VK_NULL_HANDLE, &shader[VERTEX]);
+	vkCreateShaderModule(VkGlobal::device, &vsModuleCreateInfo, VK_NULL_HANDLE, &shader[VERTEX]);
 
 	//Create Stage Info for Vertex Shader
 	stage_create_info[VERTEX].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -398,7 +441,7 @@ VkResult SetupPipelines()
 	psModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 	psModuleCreateInfo.codeSize = psFileSize;
 	psModuleCreateInfo.pCode = reinterpret_cast<const uint32_t*>(tempShaderFile);
-	vkCreateShaderModule(vkGlobal.device, &psModuleCreateInfo, VK_NULL_HANDLE, &shader[FRAGMENT]);
+	vkCreateShaderModule(VkGlobal::device, &psModuleCreateInfo, VK_NULL_HANDLE, &shader[FRAGMENT]);
 
 	//Create Stage Info for Fragment Shader
 	stage_create_info[FRAGMENT].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -427,14 +470,14 @@ VkResult SetupPipelines()
 	VkViewport viewport = {};
 	viewport.x = 0.0f;
 	viewport.y = 0.0f;
-	viewport.width = vkGlobal.surfaceCapabilities.currentExtent.width;
-	viewport.height = vkGlobal.surfaceCapabilities.currentExtent.height;
+	viewport.width = VkGlobal::surfaceCapabilities.currentExtent.width;
+	viewport.height = VkGlobal::surfaceCapabilities.currentExtent.height;
 	viewport.minDepth = 0.0f;
 	viewport.maxDepth = 1.0f;
 
 	VkRect2D scissor = {};
 	scissor.offset = { 0,0 };
-	scissor.extent = vkGlobal.surfaceCapabilities.currentExtent;
+	scissor.extent = VkGlobal::surfaceCapabilities.currentExtent;
 
 	VkPipelineViewportStateCreateInfo viewport_create_info = {};
 	viewport_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -461,7 +504,7 @@ VkResult SetupPipelines()
 	VkPipelineMultisampleStateCreateInfo multisample_create_info = {};
 	multisample_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 	multisample_create_info.sampleShadingEnable = VK_FALSE;
-	multisample_create_info.rasterizationSamples = vkGlobal.msaa;
+	multisample_create_info.rasterizationSamples = VkGlobal::msaa;
 	multisample_create_info.minSampleShading = 1.0f;
 	multisample_create_info.pSampleMask = VK_NULL_HANDLE;
 	multisample_create_info.alphaToCoverageEnable = VK_FALSE;
@@ -513,7 +556,7 @@ VkResult SetupPipelines()
 	pipeline_layout_create_info.pSetLayouts = &vkImGui.descriptorSetLayout;
 	pipeline_layout_create_info.pushConstantRangeCount = 0;
 	pipeline_layout_create_info.pPushConstantRanges = nullptr;
-	VkResult r = vkCreatePipelineLayout(vkGlobal.device, &pipeline_layout_create_info, nullptr, &vkImGui.pipelineLayout);
+	VkResult r = vkCreatePipelineLayout(VkGlobal::device, &pipeline_layout_create_info, nullptr, &vkImGui.pipelineLayout);
 
 	//////////////////////////////////////////////////
 	//												//
@@ -535,17 +578,17 @@ VkResult SetupPipelines()
 	pipeline_create_info.pDynamicState = VK_NULL_HANDLE;
 
 	pipeline_create_info.layout = vkImGui.pipelineLayout;
-	pipeline_create_info.renderPass = vkGlobal.renderPass;
+	pipeline_create_info.renderPass = VkGlobal::renderPass;
 	pipeline_create_info.subpass = 0;
 
 	pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
 	pipeline_create_info.basePipelineIndex = -1;
 
-	vkCreateGraphicsPipelines(vkGlobal.device, VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr, &vkImGui.graphicsPipeline);
+	vkCreateGraphicsPipelines(VkGlobal::device, VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr, &vkImGui.graphicsPipeline);
 
 	//Cleanup
-	vkDestroyShaderModule(vkGlobal.device, shader[VERTEX], nullptr);
-	vkDestroyShaderModule(vkGlobal.device, shader[FRAGMENT], nullptr);
+	vkDestroyShaderModule(VkGlobal::device, shader[VERTEX], nullptr);
+	vkDestroyShaderModule(VkGlobal::device, shader[FRAGMENT], nullptr);
 
 	return VK_SUCCESS;
 }
@@ -559,16 +602,16 @@ VkResult ImGuiGlobal::Init_vkImGui()
 
 	//Setup the initinfo
 	ImGui_ImplVulkan_InitInfo init_info = {};
-	init_info.Instance = vkGlobal.instance;
-	init_info.PhysicalDevice = vkGlobal.physicalDevice;
-	init_info.Device = vkGlobal.device;
-	init_info.QueueFamily = vkGlobal.GRAPHICS_INDEX;
-	init_info.Queue = vkGlobal.queueGraphics;
+	init_info.Instance = VkGlobal::instance;
+	init_info.PhysicalDevice = VkGlobal::physicalDevice;
+	init_info.Device = VkGlobal::device;
+	init_info.QueueFamily = VkGlobal::GRAPHICS_INDEX;
+	init_info.Queue = VkGlobal::queueGraphics;
 	init_info.PipelineCache = vkImGui.pipelineCache;
 	init_info.DescriptorPool = vkImGui.descriptorPoolImGui;
 	init_info.Allocator = VK_NULL_HANDLE;
-	init_info.MinImageCount = vkGlobal.surfaceCapabilities.minImageCount;
-	init_info.ImageCount = vkGlobal.frameMax;
+	init_info.MinImageCount = VkGlobal::surfaceCapabilities.minImageCount;
+	init_info.ImageCount = VkGlobal::frameMax;
 	init_info.CheckVkResultFn = check_vk_result;
 	init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 

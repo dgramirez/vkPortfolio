@@ -172,7 +172,7 @@ void GWindowEvent() {
 		break;
 	case GW::SYSTEM::GWindow::Events::DISPLAY_CLOSED:
 		//Destroy Instance
-		if (vkGlobal.instance) { vkDestroyInstance(vkGlobal.instance, nullptr); vkGlobal.instance = {}; }
+		if (VkGlobal::instance) { vkDestroyInstance(VkGlobal::instance, nullptr); VkGlobal::instance = {}; }
 		break;
 	}
 }

@@ -1,55 +1,53 @@
 #include "imgui_impl_vulkan.h"
 
 struct VkGlobal {
-
 	//Vulkan Objects
-	VkInstance instance = {};
-	VkSurfaceKHR surface = {};
-	VkPhysicalDevice physicalDevice = {};
-	VkSampleCountFlagBits msaa = VK_SAMPLE_COUNT_1_BIT;
-	VkDevice device = {};
-	VmaAllocator allocator = {};
-	VkSwapchainKHR swapchain = {};
-	VkRenderPass renderPass = {};
+	static VkInstance instance;
+	static VkSurfaceKHR surface;
+	static VkPhysicalDevice physicalDevice;
+	static VkSampleCountFlagBits msaa;
+	static VkDevice device;
+	static VmaAllocator allocator;
+	static VkSwapchainKHR swapchain;
+	static VkRenderPass renderPass;
 
 	//Queue Family Info
-	uint16_t GRAPHICS_INDEX = 0; VkQueue queueGraphics = {};
-	uint16_t PRESENT_INDEX = 0;  VkQueue queuePresent = {};
-	uint16_t COMPUTE_INDEX = 0;  VkQueue queueCompute = {};
-	uint16_t TRANSFER_INDEX = 0; VkQueue queueTransfer = {};
-	std::vector<uint32_t> uniqueIndices;
+	static uint16_t GRAPHICS_INDEX; static VkQueue queueGraphics;
+	static uint16_t PRESENT_INDEX;  static VkQueue queuePresent;
+	static uint16_t COMPUTE_INDEX;  static VkQueue queueCompute;
+	static uint16_t TRANSFER_INDEX; static VkQueue queueTransfer;
+	static std::vector<uint32_t> uniqueIndices;
 
 	//Vulkan Debug Objects
-	VkDebugReportCallbackEXT debugReportCallback = {};
+	static VkDebugReportCallbackEXT debugReportCallback;
 
 	//Vulkan Extensions & Layers that are Active
-	std::vector<const char*> instanceExtensionsActive;
-	std::vector<const char*> instanceLayersActive;
-	std::vector<const char*> deviceExtensionsActive;
+	static std::vector<const char*> instanceExtensionsActive;
+	static std::vector<const char*> instanceLayersActive;
+	static std::vector<const char*> deviceExtensionsActive;
 
 	//Vulkan ALL Extensions & Layers
-	std::vector<VkExtensionProperties> instanceExtensionsAll;
-	std::vector<VkLayerProperties> instanceLayersAll;
-	std::vector<VkPhysicalDevice> physicalDeviceAll;
+	static std::vector<VkExtensionProperties> instanceExtensionsAll;
+	static std::vector<VkLayerProperties> instanceLayersAll;
+	static std::vector<VkPhysicalDevice> physicalDeviceAll;
 
 	//Vulkan Physical Device Properties
-	std::unordered_map<VkPhysicalDevice,std::vector<VkExtensionProperties>> physicalDeviceExtensionsAll;
-	std::unordered_map<VkPhysicalDevice,std::vector<VkQueueFamilyProperties>> physicalDeviceQueueFamilyPropertiesAll;
-	std::unordered_map<VkPhysicalDevice, VkPhysicalDeviceFeatures> physicalDeviceFeaturesAll;
-	std::unordered_map<VkPhysicalDevice, VkPhysicalDeviceProperties> physicalDevicePropertiesAll;
-	std::unordered_map<VkPhysicalDevice, VkPhysicalDeviceMemoryProperties> physicalDeviceMemoryPropertiesAll;
+	static std::unordered_map<VkPhysicalDevice,std::vector<VkExtensionProperties>> physicalDeviceExtensionsAll;
+	static std::unordered_map<VkPhysicalDevice,std::vector<VkQueueFamilyProperties>> physicalDeviceQueueFamilyPropertiesAll;
+	static std::unordered_map<VkPhysicalDevice, VkPhysicalDeviceFeatures> physicalDeviceFeaturesAll;
+	static std::unordered_map<VkPhysicalDevice, VkPhysicalDeviceProperties> physicalDevicePropertiesAll;
+	static std::unordered_map<VkPhysicalDevice, VkPhysicalDeviceMemoryProperties> physicalDeviceMemoryPropertiesAll;
 
 	//Vulkan Surface Properties
-	VkSurfaceCapabilitiesKHR surfaceCapabilities = {};
-	std::vector<VkSurfaceFormatKHR> surfaceFormatsAll;
-	std::vector<VkPresentModeKHR> surfacePresentModesAll;
-	uint32_t frameMax;
+	static VkSurfaceCapabilitiesKHR surfaceCapabilities ;
+	static std::vector<VkSurfaceFormatKHR> surfaceFormatsAll;
+	static std::vector<VkPresentModeKHR> surfacePresentModesAll;
+	static uint32_t frameMax;
 
 	//Helper Methods
 	static VkResult CreateImage(const VkFormat& _format, const VkExtent3D& _imageExtent, const VkSampleCountFlagBits& _samples, const VkImageTiling& _tiling, const VkImageUsageFlags& _usageFlags, const VkMemoryPropertyFlags& _memoryPropertyFlags, VkImage* _outImage, VkDeviceMemory* _outImageMemory);
 	static VkResult CreateImageView(const VkImage& _image, const VkFormat& _format, const VkImageAspectFlags& _imageAspectFlags, VkImageView* _outImageView);
-	};
-extern VkGlobal vkGlobal;
+};
 
 struct ImGuiGlobal {
 	ImGui_ImplVulkan_InitInfo init_info = {};
