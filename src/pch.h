@@ -14,9 +14,6 @@
 //(My) SSE Math Library
 #include "ssemath.h"
 
-//ImGui
-#include "imgui.h"
-
 //Vulkan Memory Allocator
 #include "vk_mem_alloc.h"
 
@@ -37,5 +34,7 @@
 #include "Gateware.h"
 
 //Gateware + ImGui
+#include "imgui.h"
+#include "imgui_impl_vulkan.h"
 #include "ImGui/imgui_impl_gateware.h"
 #endif

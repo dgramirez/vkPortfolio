@@ -1,5 +1,6 @@
 #include "Scenes.h"
 #include "../Vulkan/VkGlobals.h"
+#include "../ImGui/ImGuiGlobals.h"
 
 ////////////////////////
 // Scene Menu Methods //

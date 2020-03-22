@@ -1,6 +1,7 @@
 #include "Vulkan/VkGlobals.h"
 #include "Scenes/Scenes.h"
 #include "Vulkan/VkCore.h"
+#include "ImGui/ImGuiGlobals.h"
 #include <chrono>
 
 namespace {
