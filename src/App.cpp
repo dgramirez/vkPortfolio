@@ -67,7 +67,7 @@ namespace App {
 			//Setup Menus
 			CurrentScene = new StartScene();
 			Menu = new SceneMenu(CurrentScene);
-			ImGuiGlobal::Init_vkImGui();
+			VkImGui::Init_vkImGui();
 
 			//Setup Time
 			double t = 0.0;

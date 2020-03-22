@@ -1,478 +1,515 @@
 #include "ImGuiGlobals.h"
 #include "../Vulkan/VkGlobals.h"
 
-ImGuiGlobal vkImGui;
+//Render to Texture Necessities
+VkImage VkImGui::image = {};
+VkDeviceMemory VkImGui::memory = {};
+VkImageView VkImGui::imageView = {};
+VkRenderPass VkImGui::renderPass = {};
+VkFramebuffer VkImGui::frameBuffer = {};
+VkSampler VkImGui::sampler = {};
+std::vector<VkClearValue> VkImGui::clearColor;
 
-VkResult SetupDescriptorPool() {
-	VkDescriptorPoolSize pool_sizes[] =
-	{
-		{ VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
-		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
-		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
-		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
-	};
-	VkDescriptorPoolCreateInfo pool_info = {};
-	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-	pool_info.maxSets = 1000 * IM_ARRAYSIZE(pool_sizes);
-	pool_info.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
-	pool_info.pPoolSizes = pool_sizes;
-	return vkCreateDescriptorPool(VkGlobal::device, &pool_info, VK_NULL_HANDLE, &vkImGui.descriptorPoolImGui);
-}
-VkResult SetupRenderPass() {
-	//Primary Swapchain Description and Swapchain
-	VkAttachmentDescription color_attachment_description = {};
-	color_attachment_description.format = VK_FORMAT_B8G8R8A8_UNORM;
-	color_attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
-	color_attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	color_attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	color_attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	color_attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	color_attachment_description.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	color_attachment_description.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+//Pipeline to draw the texture
+VkDescriptorPool VkImGui::descriptorPool = {};
+VkDescriptorSetLayout VkImGui::descriptorSetLayout = {};
+std::vector<VkDescriptorSet> VkImGui::descriptorSet = {};
+VkPipelineLayout VkImGui::pipelineLayout = {};
+VkPipeline VkImGui::graphicsPipeline = {};
 
-	VkAttachmentReference color_attachment_reference = {};
-	color_attachment_reference.attachment = 0;
-	color_attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+//Doing Commands and Synchronization
+VkCommandPool VkImGui::commandPool = {};
+std::vector<VkCommandBuffer> VkImGui::commandBuffer;
+std::vector<VkFence> VkImGui::fence = {};
+std::vector<VkSemaphore> VkImGui::semaphore = {};
+ImGui_ImplVulkan_InitInfo VkImGui::init_info = {};
 
-	//Setup the Subpass and Dependency
-	VkSubpassDescription subpass_description = {};
-	subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-	subpass_description.colorAttachmentCount = 1;
-	subpass_description.pColorAttachments = &color_attachment_reference;
+namespace {
+	VkPipelineCache pipelineCache = {};
+	VkDescriptorPool descriptorPool = {};
 
-	VkSubpassDependency subpass_dependency = {};
-	subpass_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-	subpass_dependency.dstSubpass = 0;
-	subpass_dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	subpass_dependency.srcAccessMask = 0;
-	subpass_dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-	//Setup and Create the RenderPass
-	VkRenderPassCreateInfo render_pass_create_info = {};
-	render_pass_create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	render_pass_create_info.attachmentCount = 1;
-	render_pass_create_info.pAttachments = &color_attachment_description;
-	render_pass_create_info.subpassCount = 1;
-	render_pass_create_info.pSubpasses = &subpass_description;
-	render_pass_create_info.dependencyCount = 1;
-	render_pass_create_info.pDependencies = &subpass_dependency;
-
-	return vkCreateRenderPass(VkGlobal::device, &render_pass_create_info, nullptr, &vkImGui.renderPass);
-}
-VkResult SetupCommandObjects() {
-	//Setup ImGui's Command Pool & Buffer
-	VkCommandPoolCreateInfo cpool_create_info = {};
-	cpool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-	cpool_create_info.queueFamilyIndex = VkGlobal::GRAPHICS_INDEX;
-	cpool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-	cpool_create_info.pNext = VK_NULL_HANDLE;
-	vkCreateCommandPool(VkGlobal::device, &cpool_create_info, VK_NULL_HANDLE, &vkImGui.commandPool);
-
-	//Allocate Command buffer Information
-	vkImGui.commandBuffer.resize(VkGlobal::frameMax);
-	VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
-	command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	command_buffer_allocate_info.commandPool = vkImGui.commandPool;
-	command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	command_buffer_allocate_info.commandBufferCount = 2;
-
-	return vkAllocateCommandBuffers(VkGlobal::device, &command_buffer_allocate_info, vkImGui.commandBuffer.data());
-}
-VkResult SetupFonts() {
-	// Use any command queue
-	VkResult err = vkResetCommandPool(VkGlobal::device, vkImGui.commandPool, 0);
-	ImGuiGlobal::check_vk_result(err);
-	VkCommandBufferBeginInfo begin_info = {};
-	begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-	err = vkBeginCommandBuffer(vkImGui.commandBuffer[0], &begin_info);
-	ImGuiGlobal::check_vk_result(err);
-
-	ImGui_ImplVulkan_CreateFontsTexture(vkImGui.commandBuffer[0]);
-
-	VkSubmitInfo end_info = {};
-	end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	end_info.commandBufferCount = 1;
-	end_info.pCommandBuffers = &vkImGui.commandBuffer[0];
-	err = vkEndCommandBuffer(vkImGui.commandBuffer[0]);
-	ImGuiGlobal::check_vk_result(err);
-	err = vkQueueSubmit(VkGlobal::queueGraphics, 1, &end_info, VK_NULL_HANDLE);
-	ImGuiGlobal::check_vk_result(err);
-
-	err = vkDeviceWaitIdle(VkGlobal::device);
-	ImGuiGlobal::check_vk_result(err);
-	ImGui_ImplVulkan_DestroyFontUploadObjects();
-	err = vkResetCommandPool(VkGlobal::device, vkImGui.commandPool, 0);
-
-	return err;
-}
-VkResult SetupImage() {
-	VkExtent3D ext = {
-		VkGlobal::surfaceCapabilities.currentExtent.width,
-		VkGlobal::surfaceCapabilities.currentExtent.height,
-		1
-	};
-	VkResult r = VkGlobal::CreateImage(VK_FORMAT_B8G8R8A8_UNORM, ext, VkGlobal::msaa, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &vkImGui.image, &vkImGui.memory);
-	r = VkGlobal::CreateImageView(vkImGui.image, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, &vkImGui.imageView);
-	return VK_SUCCESS;
-}
-VkResult SetupFrameBuffer() {
-	//Setup Variables
-	VkResult r;
-
-	//Frame Buffer's Create Info
-	VkFramebufferCreateInfo frame_buffer_create_info = {};
-	frame_buffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	frame_buffer_create_info.renderPass = vkImGui.renderPass;
-	frame_buffer_create_info.attachmentCount = 1;
-	frame_buffer_create_info.pAttachments = &vkImGui.imageView;
-	frame_buffer_create_info.width = VkGlobal::surfaceCapabilities.currentExtent.width;
-	frame_buffer_create_info.height = VkGlobal::surfaceCapabilities.currentExtent.height;
-	frame_buffer_create_info.layers = 1;
-
-	//Create the Surface (With Results) [VK_SUCCESS = 0]
-	r = vkCreateFramebuffer(VkGlobal::device, &frame_buffer_create_info, nullptr, &vkImGui.frameBuffer);
-
-	return r;
-}
-VkResult SetupSyncObjects() {
-	//Semaphore Info Create
-	VkSemaphoreCreateInfo semaphore_create_info = {};
-	semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-	//Fence Info Create
-	VkFenceCreateInfo fence_create_info = {};
-	fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-	fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-	//Resize Semaphores
-	vkImGui.fence.resize(VkGlobal::frameMax);
-	vkImGui.semaphore.resize(VkGlobal::frameMax);
-
-	//Create the Semaphores and Fences
-	VkResult r;
-	for (unsigned int i = 0; i < VkGlobal::frameMax; ++i) {
-		r = vkCreateSemaphore(VkGlobal::device, &semaphore_create_info, nullptr, &vkImGui.semaphore[i]);
-		if (r) {
-			return r;
-		}
-		r = vkCreateFence(VkGlobal::device, &fence_create_info, nullptr, &vkImGui.fence[i]);
-		if (r) {
-			return r;
-		}
+	VkResult SetupDescriptorPool() {
+		VkDescriptorPoolSize pool_sizes[] =
+		{
+			{ VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+			{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+			{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
+		};
+		VkDescriptorPoolCreateInfo pool_info = {};
+		pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+		pool_info.maxSets = 1000 * IM_ARRAYSIZE(pool_sizes);
+		pool_info.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
+		pool_info.pPoolSizes = pool_sizes;
+		return vkCreateDescriptorPool(VkGlobal::device, &pool_info, VK_NULL_HANDLE, &descriptorPool);
+	}
+	void check_vk_result(VkResult err) {
+		if (err == 0) return;
+#ifdef _DEBUG
+		printf("VkResult %d\n", err);
+#endif
+		if (err < 0)
+			abort();
 	}
 
-	//Semaphores and Fences has been created successfully!
-	return r;
-}
-VkResult SetupDescriptors() {
-	//Descriptor Pool
-	VkDescriptorPoolSize dps = {};
-	dps.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	dps.descriptorCount = 0xFF;
+	VkResult SetupRenderPass() {
+		//Primary Swapchain Description and Swapchain
+		VkAttachmentDescription color_attachment_description = {};
+		color_attachment_description.format = VK_FORMAT_B8G8R8A8_UNORM;
+		color_attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
+		color_attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		color_attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		color_attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		color_attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		color_attachment_description.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		color_attachment_description.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-	VkDescriptorPoolCreateInfo dp_create_info = {};
-	dp_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	dp_create_info.poolSizeCount = 1;
-	dp_create_info.pPoolSizes = &dps;
-	dp_create_info.maxSets = 0xFF;
-	vkCreateDescriptorPool(VkGlobal::device, &dp_create_info, nullptr, &vkImGui.descriptorPool);
+		VkAttachmentReference color_attachment_reference = {};
+		color_attachment_reference.attachment = 0;
+		color_attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-	//Descriptor Set Layout
-	VkDescriptorSetLayoutBinding ps_img = {};
-	ps_img.binding = 0;
-	ps_img.descriptorCount = 1;
-	ps_img.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	ps_img.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		//Setup the Subpass and Dependency
+		VkSubpassDescription subpass_description = {};
+		subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+		subpass_description.colorAttachmentCount = 1;
+		subpass_description.pColorAttachments = &color_attachment_reference;
 
-	VkDescriptorSetLayoutCreateInfo dsl_create_info = {};
-	dsl_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	dsl_create_info.bindingCount = 1;
-	dsl_create_info.pBindings = &ps_img;
-	vkCreateDescriptorSetLayout(VkGlobal::device, &dsl_create_info, nullptr, &vkImGui.descriptorSetLayout);
+		VkSubpassDependency subpass_dependency = {};
+		subpass_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+		subpass_dependency.dstSubpass = 0;
+		subpass_dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		subpass_dependency.srcAccessMask = 0;
+		subpass_dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
-	//Descriptor Sets
-	vkImGui.descriptorSet.resize(VkGlobal::frameMax);
-	std::vector<VkDescriptorSetLayout> dsl_list(VkGlobal::frameMax, vkImGui.descriptorSetLayout);
-	VkDescriptorSetAllocateInfo ds_allocate_info = {};
-	ds_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	ds_allocate_info.descriptorSetCount = VkGlobal::frameMax;
-	ds_allocate_info.descriptorPool = vkImGui.descriptorPool;
-	ds_allocate_info.pSetLayouts = &dsl_list[0];
-	vkAllocateDescriptorSets(VkGlobal::device, &ds_allocate_info, vkImGui.descriptorSet.data());
+		//Setup and Create the RenderPass
+		VkRenderPassCreateInfo render_pass_create_info = {};
+		render_pass_create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+		render_pass_create_info.attachmentCount = 1;
+		render_pass_create_info.pAttachments = &color_attachment_description;
+		render_pass_create_info.subpassCount = 1;
+		render_pass_create_info.pSubpasses = &subpass_description;
+		render_pass_create_info.dependencyCount = 1;
+		render_pass_create_info.pDependencies = &subpass_dependency;
 
-	//Create Sampler
-	VkSamplerCreateInfo sampler_create_info = {};
-	sampler_create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-	sampler_create_info.magFilter = VK_FILTER_LINEAR;
-	sampler_create_info.minFilter = VK_FILTER_LINEAR;
-	sampler_create_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	sampler_create_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	sampler_create_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	sampler_create_info.anisotropyEnable = VK_TRUE;
-	sampler_create_info.maxAnisotropy = static_cast<float>(VkGlobal::msaa);
-	sampler_create_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-	sampler_create_info.unnormalizedCoordinates = VK_FALSE;
-	sampler_create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-	sampler_create_info.mipLodBias = 0.0f;
-	sampler_create_info.minLod = 0.0f;
-	sampler_create_info.maxLod = 1.0f;
-
-	vkCreateSampler(VkGlobal::device, &sampler_create_info, nullptr, &vkImGui.sampler);
-
-	for (uint32_t i = 0; i < VkGlobal::frameMax; ++i)
-	{
-		VkDescriptorImageInfo dii = {};
-		dii.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		dii.imageView = vkImGui.imageView;
-		dii.sampler = vkImGui.sampler;
-
-		VkWriteDescriptorSet wds = {};
-		wds.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		wds.dstSet = vkImGui.descriptorSet[i];
-		wds.dstBinding = 0;
-		wds.dstArrayElement = 0;
-		wds.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		wds.descriptorCount = 1;
-		wds.pBufferInfo = nullptr;
-		wds.pImageInfo = &dii;
-		wds.pTexelBufferView = nullptr;
-		wds.pNext = nullptr;
-
-		vkUpdateDescriptorSets(VkGlobal::device, 1, &wds, 0, nullptr);
+		return vkCreateRenderPass(VkGlobal::device, &render_pass_create_info, nullptr, &VkImGui::renderPass);
 	}
+	VkResult SetupCommandObjects() {
+		//Setup ImGui's Command Pool & Buffer
+		VkCommandPoolCreateInfo cpool_create_info = {};
+		cpool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		cpool_create_info.queueFamilyIndex = VkGlobal::GRAPHICS_INDEX;
+		cpool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+		cpool_create_info.pNext = VK_NULL_HANDLE;
+		vkCreateCommandPool(VkGlobal::device, &cpool_create_info, VK_NULL_HANDLE, &VkImGui::commandPool);
 
-	return VK_SUCCESS;
+		//Allocate Command buffer Information
+		VkImGui::commandBuffer.resize(VkGlobal::frameMax);
+		VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
+		command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		command_buffer_allocate_info.commandPool = VkImGui::commandPool;
+		command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		command_buffer_allocate_info.commandBufferCount = 2;
+
+		return vkAllocateCommandBuffers(VkGlobal::device, &command_buffer_allocate_info, VkImGui::commandBuffer.data());
+	}
+	VkResult SetupFonts() {
+		// Use any command queue
+		VkResult err = vkResetCommandPool(VkGlobal::device, VkImGui::commandPool, 0);
+		::check_vk_result(err);
+		VkCommandBufferBeginInfo begin_info = {};
+		begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+		err = vkBeginCommandBuffer(VkImGui::commandBuffer[0], &begin_info);
+		::check_vk_result(err);
+
+		ImGui_ImplVulkan_CreateFontsTexture(VkImGui::commandBuffer[0]);
+
+		VkSubmitInfo end_info = {};
+		end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		end_info.commandBufferCount = 1;
+		end_info.pCommandBuffers = &VkImGui::commandBuffer[0];
+		err = vkEndCommandBuffer(VkImGui::commandBuffer[0]);
+		::check_vk_result(err);
+		err = vkQueueSubmit(VkGlobal::queueGraphics, 1, &end_info, VK_NULL_HANDLE);
+		::check_vk_result(err);
+
+		err = vkDeviceWaitIdle(VkGlobal::device);
+		::check_vk_result(err);
+		ImGui_ImplVulkan_DestroyFontUploadObjects();
+		err = vkResetCommandPool(VkGlobal::device, VkImGui::commandPool, 0);
+
+		return err;
+	}
+	VkResult SetupImage() {
+		VkExtent3D ext = {
+			VkGlobal::surfaceCapabilities.currentExtent.width,
+			VkGlobal::surfaceCapabilities.currentExtent.height,
+			1
+		};
+		VkResult r = VkGlobal::CreateImage(VK_FORMAT_B8G8R8A8_UNORM, ext, VkGlobal::msaa, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &VkImGui::image, &VkImGui::memory);
+		r = VkGlobal::CreateImageView(VkImGui::image, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, &VkImGui::imageView);
+		return VK_SUCCESS;
+	}
+	VkResult SetupFrameBuffer() {
+		//Setup Variables
+		VkResult r;
+
+		//Frame Buffer's Create Info
+		VkFramebufferCreateInfo frame_buffer_create_info = {};
+		frame_buffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		frame_buffer_create_info.renderPass = VkImGui::renderPass;
+		frame_buffer_create_info.attachmentCount = 1;
+		frame_buffer_create_info.pAttachments = &VkImGui::imageView;
+		frame_buffer_create_info.width = VkGlobal::surfaceCapabilities.currentExtent.width;
+		frame_buffer_create_info.height = VkGlobal::surfaceCapabilities.currentExtent.height;
+		frame_buffer_create_info.layers = 1;
+
+		//Create the Surface (With Results) [VK_SUCCESS = 0]
+		r = vkCreateFramebuffer(VkGlobal::device, &frame_buffer_create_info, nullptr, &VkImGui::frameBuffer);
+
+		return r;
+	}
+	VkResult SetupSyncObjects() {
+		//Semaphore Info Create
+		VkSemaphoreCreateInfo semaphore_create_info = {};
+		semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+		//Fence Info Create
+		VkFenceCreateInfo fence_create_info = {};
+		fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+		//Resize Semaphores
+		VkImGui::fence.resize(VkGlobal::frameMax);
+		VkImGui::semaphore.resize(VkGlobal::frameMax);
+
+		//Create the Semaphores and Fences
+		VkResult r;
+		for (unsigned int i = 0; i < VkGlobal::frameMax; ++i) {
+			r = vkCreateSemaphore(VkGlobal::device, &semaphore_create_info, nullptr, &VkImGui::semaphore[i]);
+			if (r) {
+				return r;
+			}
+			r = vkCreateFence(VkGlobal::device, &fence_create_info, nullptr, &VkImGui::fence[i]);
+			if (r) {
+				return r;
+			}
+		}
+
+		//Semaphores and Fences has been created successfully!
+		return r;
+	}
+	VkResult SetupDescriptors() {
+		//Descriptor Pool
+		VkDescriptorPoolSize dps = {};
+		dps.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		dps.descriptorCount = 0xFF;
+
+		VkDescriptorPoolCreateInfo dp_create_info = {};
+		dp_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		dp_create_info.poolSizeCount = 1;
+		dp_create_info.pPoolSizes = &dps;
+		dp_create_info.maxSets = 0xFF;
+		vkCreateDescriptorPool(VkGlobal::device, &dp_create_info, nullptr, &VkImGui::descriptorPool);
+
+		//Descriptor Set Layout
+		VkDescriptorSetLayoutBinding ps_img = {};
+		ps_img.binding = 0;
+		ps_img.descriptorCount = 1;
+		ps_img.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		ps_img.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		VkDescriptorSetLayoutCreateInfo dsl_create_info = {};
+		dsl_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		dsl_create_info.bindingCount = 1;
+		dsl_create_info.pBindings = &ps_img;
+		vkCreateDescriptorSetLayout(VkGlobal::device, &dsl_create_info, nullptr, &VkImGui::descriptorSetLayout);
+
+		//Descriptor Sets
+		VkImGui::descriptorSet.resize(VkGlobal::frameMax);
+		std::vector<VkDescriptorSetLayout> dsl_list(VkGlobal::frameMax, VkImGui::descriptorSetLayout);
+		VkDescriptorSetAllocateInfo ds_allocate_info = {};
+		ds_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		ds_allocate_info.descriptorSetCount = VkGlobal::frameMax;
+		ds_allocate_info.descriptorPool = VkImGui::descriptorPool;
+		ds_allocate_info.pSetLayouts = &dsl_list[0];
+		vkAllocateDescriptorSets(VkGlobal::device, &ds_allocate_info, VkImGui::descriptorSet.data());
+
+		//Create Sampler
+		VkSamplerCreateInfo sampler_create_info = {};
+		sampler_create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		sampler_create_info.magFilter = VK_FILTER_LINEAR;
+		sampler_create_info.minFilter = VK_FILTER_LINEAR;
+		sampler_create_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		sampler_create_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		sampler_create_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		sampler_create_info.anisotropyEnable = VK_TRUE;
+		sampler_create_info.maxAnisotropy = static_cast<float>(VkGlobal::msaa);
+		sampler_create_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+		sampler_create_info.unnormalizedCoordinates = VK_FALSE;
+		sampler_create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+		sampler_create_info.mipLodBias = 0.0f;
+		sampler_create_info.minLod = 0.0f;
+		sampler_create_info.maxLod = 1.0f;
+
+		vkCreateSampler(VkGlobal::device, &sampler_create_info, nullptr, &VkImGui::sampler);
+
+		for (uint32_t i = 0; i < VkGlobal::frameMax; ++i)
+		{
+			VkDescriptorImageInfo dii = {};
+			dii.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			dii.imageView = VkImGui::imageView;
+			dii.sampler = VkImGui::sampler;
+
+			VkWriteDescriptorSet wds = {};
+			wds.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			wds.dstSet = VkImGui::descriptorSet[i];
+			wds.dstBinding = 0;
+			wds.dstArrayElement = 0;
+			wds.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			wds.descriptorCount = 1;
+			wds.pBufferInfo = nullptr;
+			wds.pImageInfo = &dii;
+			wds.pTexelBufferView = nullptr;
+			wds.pNext = nullptr;
+
+			vkUpdateDescriptorSets(VkGlobal::device, 1, &wds, 0, nullptr);
+		}
+
+		return VK_SUCCESS;
+	}
+	VkResult SetupPipelines()
+	{
+		//Const Variables
+		const uint32_t VERTEX = 0;
+		const uint32_t FRAGMENT = 1;
+
+		//Setup Shader Info
+		VkShaderModule shader[2] = {};
+		VkPipelineShaderStageCreateInfo stage_create_info[2] = {};
+
+		//Create the GFile
+		const char* vsFilename = "../../../src/Scenes/A_StartScene/imgui.vert.spv";
+		const char* psFilename = "../../../src/Scenes/A_StartScene/imgui.frag.spv";
+
+		GW::SYSTEM::GFile ShaderFile; ShaderFile.Create();
+
+		//Get the size of the Vertex Shader
+		uint32_t vsFileSize;
+		ShaderFile.GetFileSize(vsFilename, vsFileSize);
+
+		//Open the Vertex Shader
+		if (-ShaderFile.OpenBinaryRead(vsFilename))
+			return VK_ERROR_FEATURE_NOT_PRESENT;
+
+		//Copy the Contents of the Vertex Shader
+		char* tempShaderFile = new char[vsFileSize];
+		ShaderFile.Read(tempShaderFile, vsFileSize);
+
+		//Create Shader Module for Vertex Shader
+		VkShaderModuleCreateInfo vsModuleCreateInfo = {};
+		vsModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+		vsModuleCreateInfo.codeSize = vsFileSize;
+		vsModuleCreateInfo.pCode = reinterpret_cast<const uint32_t*>(tempShaderFile);
+		vkCreateShaderModule(VkGlobal::device, &vsModuleCreateInfo, VK_NULL_HANDLE, &shader[VERTEX]);
+
+		//Create Stage Info for Vertex Shader
+		stage_create_info[VERTEX].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		stage_create_info[VERTEX].stage = VK_SHADER_STAGE_VERTEX_BIT;
+		stage_create_info[VERTEX].module = shader[VERTEX];
+		stage_create_info[VERTEX].pName = "main";
+
+		//Cleanup
+		delete[] tempShaderFile;
+		ShaderFile.CloseFile();
+
+		//Get the size of the Fragment Shader
+		uint32_t psFileSize;
+		ShaderFile.GetFileSize(psFilename, psFileSize);
+
+		//Open the Fragment Shader
+		if (-ShaderFile.OpenBinaryRead(psFilename))
+			return VK_ERROR_FEATURE_NOT_PRESENT;
+
+		//Copy the Contents of the Fragment Shader
+		tempShaderFile = new char[psFileSize];
+		ShaderFile.Read(tempShaderFile, psFileSize);
+
+		//Create Shader Module for Fragment Shader
+		VkShaderModuleCreateInfo psModuleCreateInfo = {};
+		psModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+		psModuleCreateInfo.codeSize = psFileSize;
+		psModuleCreateInfo.pCode = reinterpret_cast<const uint32_t*>(tempShaderFile);
+		vkCreateShaderModule(VkGlobal::device, &psModuleCreateInfo, VK_NULL_HANDLE, &shader[FRAGMENT]);
+
+		//Create Stage Info for Fragment Shader
+		stage_create_info[FRAGMENT].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		stage_create_info[FRAGMENT].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+		stage_create_info[FRAGMENT].module = shader[FRAGMENT];
+		stage_create_info[FRAGMENT].pName = "main";
+
+		//Cleanup
+		delete[] tempShaderFile;
+		ShaderFile.CloseFile();
+
+		//Assembly State
+		VkPipelineInputAssemblyStateCreateInfo assembly_create_info = {};
+		assembly_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+		assembly_create_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		assembly_create_info.primitiveRestartEnable = false;
+
+		VkPipelineVertexInputStateCreateInfo input_vertex_info = {};
+		input_vertex_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+		input_vertex_info.vertexBindingDescriptionCount = 0;
+		input_vertex_info.pVertexBindingDescriptions = VK_NULL_HANDLE;
+		input_vertex_info.vertexAttributeDescriptionCount = 0;
+		input_vertex_info.pVertexAttributeDescriptions = VK_NULL_HANDLE;
+
+		//Viewport State
+		VkViewport viewport = {};
+		viewport.x = 0.0f;
+		viewport.y = 0.0f;
+		viewport.width = VkGlobal::surfaceCapabilities.currentExtent.width;
+		viewport.height = VkGlobal::surfaceCapabilities.currentExtent.height;
+		viewport.minDepth = 0.0f;
+		viewport.maxDepth = 1.0f;
+
+		VkRect2D scissor = {};
+		scissor.offset = { 0,0 };
+		scissor.extent = VkGlobal::surfaceCapabilities.currentExtent;
+
+		VkPipelineViewportStateCreateInfo viewport_create_info = {};
+		viewport_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+		viewport_create_info.viewportCount = 1;
+		viewport_create_info.pViewports = &viewport;
+		viewport_create_info.scissorCount = 1;
+		viewport_create_info.pScissors = &scissor;
+
+		//Rasterizer State
+		VkPipelineRasterizationStateCreateInfo rasterization_create_info = {};
+		rasterization_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+		rasterization_create_info.rasterizerDiscardEnable = VK_FALSE;
+		rasterization_create_info.polygonMode = VK_POLYGON_MODE_FILL;
+		rasterization_create_info.lineWidth = 1.0f;
+		rasterization_create_info.cullMode = VK_CULL_MODE_FRONT_BIT;
+		rasterization_create_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		rasterization_create_info.depthClampEnable = VK_FALSE;
+		rasterization_create_info.depthBiasEnable = VK_FALSE;
+		rasterization_create_info.depthBiasClamp = 0.0f;
+		rasterization_create_info.depthBiasConstantFactor = 0.0f;
+		rasterization_create_info.depthBiasSlopeFactor = 0.0f;
+
+		//Multisampling State
+		VkPipelineMultisampleStateCreateInfo multisample_create_info = {};
+		multisample_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+		multisample_create_info.sampleShadingEnable = VK_FALSE;
+		multisample_create_info.rasterizationSamples = VkGlobal::msaa;
+		multisample_create_info.minSampleShading = 1.0f;
+		multisample_create_info.pSampleMask = VK_NULL_HANDLE;
+		multisample_create_info.alphaToCoverageEnable = VK_FALSE;
+		multisample_create_info.alphaToOneEnable = VK_FALSE;
+
+		//Depth-Stencil State
+		VkPipelineDepthStencilStateCreateInfo depth_stencil_create_info = {};
+		depth_stencil_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+		depth_stencil_create_info.depthTestEnable = VK_FALSE;
+		depth_stencil_create_info.depthWriteEnable = VK_FALSE;
+		depth_stencil_create_info.depthCompareOp = VK_COMPARE_OP_LESS;
+		depth_stencil_create_info.depthBoundsTestEnable = VK_FALSE;
+		depth_stencil_create_info.minDepthBounds = 0.0f;
+		depth_stencil_create_info.maxDepthBounds = 1.0f;
+		depth_stencil_create_info.stencilTestEnable = VK_FALSE;
+
+		//Color Blending Attachment & State
+		VkPipelineColorBlendAttachmentState color_blend_attachment_state = {};
+		color_blend_attachment_state.colorWriteMask = 0xF; //<-- RGBA Flags on... although blend is disabled
+		color_blend_attachment_state.blendEnable = VK_FALSE;
+		color_blend_attachment_state.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_COLOR;
+		color_blend_attachment_state.dstColorBlendFactor = VK_BLEND_FACTOR_DST_COLOR;
+		color_blend_attachment_state.colorBlendOp = VK_BLEND_OP_ADD;
+		color_blend_attachment_state.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+		color_blend_attachment_state.dstAlphaBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;
+		color_blend_attachment_state.alphaBlendOp = VK_BLEND_OP_ADD;
+
+		VkPipelineColorBlendStateCreateInfo color_blend_create_info = {};
+		color_blend_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+		color_blend_create_info.logicOpEnable = VK_FALSE;
+		color_blend_create_info.logicOp = VK_LOGIC_OP_COPY;
+		color_blend_create_info.attachmentCount = 1;
+		color_blend_create_info.pAttachments = &color_blend_attachment_state;
+		color_blend_create_info.blendConstants[0] = 0.0f;
+		color_blend_create_info.blendConstants[1] = 0.0f;
+		color_blend_create_info.blendConstants[2] = 0.0f;
+		color_blend_create_info.blendConstants[3] = 0.0f;
+
+		//Dynamic State [DISABLED.... But still showing for tutorial reasons that it exists]
+		VkPipelineDynamicStateCreateInfo dynamic_create_info = {};
+		dynamic_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+		dynamic_create_info.dynamicStateCount = 0;
+		dynamic_create_info.pDynamicStates = VK_NULL_HANDLE;
+
+		//Descriptor pipeline layout [NOTE: NEEDED FOR UNIFORM BUFFERS!, but for now not using.]
+		VkPipelineLayoutCreateInfo pipeline_layout_create_info = {};
+		pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		pipeline_layout_create_info.setLayoutCount = 1;
+		pipeline_layout_create_info.pSetLayouts = &VkImGui::descriptorSetLayout;
+		pipeline_layout_create_info.pushConstantRangeCount = 0;
+		pipeline_layout_create_info.pPushConstantRanges = nullptr;
+		VkResult r = vkCreatePipelineLayout(VkGlobal::device, &pipeline_layout_create_info, nullptr, &VkImGui::pipelineLayout);
+
+		//////////////////////////////////////////////////
+		//												//
+		//		FINALLY: GRAPHICS PIPELINE CREATION!	//
+		//												//
+		//////////////////////////////////////////////////
+
+		VkGraphicsPipelineCreateInfo pipeline_create_info = {};
+		pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+		pipeline_create_info.stageCount = 2;
+		pipeline_create_info.pStages = stage_create_info;
+		pipeline_create_info.pInputAssemblyState = &assembly_create_info;
+		pipeline_create_info.pVertexInputState = &input_vertex_info;
+		pipeline_create_info.pViewportState = &viewport_create_info;
+		pipeline_create_info.pRasterizationState = &rasterization_create_info;
+		pipeline_create_info.pMultisampleState = &multisample_create_info;
+		pipeline_create_info.pDepthStencilState = &depth_stencil_create_info;
+		pipeline_create_info.pColorBlendState = &color_blend_create_info;
+		pipeline_create_info.pDynamicState = VK_NULL_HANDLE;
+
+		pipeline_create_info.layout = VkImGui::pipelineLayout;
+		pipeline_create_info.renderPass = VkGlobal::renderPass;
+		pipeline_create_info.subpass = 0;
+
+		pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
+		pipeline_create_info.basePipelineIndex = -1;
+
+		vkCreateGraphicsPipelines(VkGlobal::device, VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr, &VkImGui::graphicsPipeline);
+
+		//Cleanup
+		vkDestroyShaderModule(VkGlobal::device, shader[VERTEX], nullptr);
+		vkDestroyShaderModule(VkGlobal::device, shader[FRAGMENT], nullptr);
+
+		return VK_SUCCESS;
+	}
 }
-VkResult SetupPipelines()
-{
-	//Const Variables
-	const uint32_t VERTEX = 0;
-	const uint32_t FRAGMENT = 1;
 
-	//Setup Shader Info
-	VkShaderModule shader[2] = {};
-	VkPipelineShaderStageCreateInfo stage_create_info[2] = {};
 
-	//Create the GFile
-	const char* vsFilename = "../../../src/Scenes/A_StartScene/imgui.vert.spv";
-	const char* psFilename = "../../../src/Scenes/A_StartScene/imgui.frag.spv";
-
-	GW::SYSTEM::GFile ShaderFile; ShaderFile.Create();
-
-	//Get the size of the Vertex Shader
-	uint32_t vsFileSize;
-	ShaderFile.GetFileSize(vsFilename, vsFileSize);
-
-	//Open the Vertex Shader
-	if (-ShaderFile.OpenBinaryRead(vsFilename))
-		return VK_ERROR_FEATURE_NOT_PRESENT;
-
-	//Copy the Contents of the Vertex Shader
-	char* tempShaderFile = new char[vsFileSize];
-	ShaderFile.Read(tempShaderFile, vsFileSize);
-
-	//Create Shader Module for Vertex Shader
-	VkShaderModuleCreateInfo vsModuleCreateInfo = {};
-	vsModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-	vsModuleCreateInfo.codeSize = vsFileSize;
-	vsModuleCreateInfo.pCode = reinterpret_cast<const uint32_t*>(tempShaderFile);
-	vkCreateShaderModule(VkGlobal::device, &vsModuleCreateInfo, VK_NULL_HANDLE, &shader[VERTEX]);
-
-	//Create Stage Info for Vertex Shader
-	stage_create_info[VERTEX].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	stage_create_info[VERTEX].stage = VK_SHADER_STAGE_VERTEX_BIT;
-	stage_create_info[VERTEX].module = shader[VERTEX];
-	stage_create_info[VERTEX].pName = "main";
-
-	//Cleanup
-	delete[] tempShaderFile;
-	ShaderFile.CloseFile();
-
-	//Get the size of the Fragment Shader
-	uint32_t psFileSize;
-	ShaderFile.GetFileSize(psFilename, psFileSize);
-
-	//Open the Fragment Shader
-	if (-ShaderFile.OpenBinaryRead(psFilename))
-		return VK_ERROR_FEATURE_NOT_PRESENT;
-
-	//Copy the Contents of the Fragment Shader
-	tempShaderFile = new char[psFileSize];
-	ShaderFile.Read(tempShaderFile, psFileSize);
-
-	//Create Shader Module for Fragment Shader
-	VkShaderModuleCreateInfo psModuleCreateInfo = {};
-	psModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-	psModuleCreateInfo.codeSize = psFileSize;
-	psModuleCreateInfo.pCode = reinterpret_cast<const uint32_t*>(tempShaderFile);
-	vkCreateShaderModule(VkGlobal::device, &psModuleCreateInfo, VK_NULL_HANDLE, &shader[FRAGMENT]);
-
-	//Create Stage Info for Fragment Shader
-	stage_create_info[FRAGMENT].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	stage_create_info[FRAGMENT].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-	stage_create_info[FRAGMENT].module = shader[FRAGMENT];
-	stage_create_info[FRAGMENT].pName = "main";
-
-	//Cleanup
-	delete[] tempShaderFile;
-	ShaderFile.CloseFile();
-
-	//Assembly State
-	VkPipelineInputAssemblyStateCreateInfo assembly_create_info = {};
-	assembly_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-	assembly_create_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-	assembly_create_info.primitiveRestartEnable = false;
-
-	VkPipelineVertexInputStateCreateInfo input_vertex_info = {};
-	input_vertex_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	input_vertex_info.vertexBindingDescriptionCount = 0;
-	input_vertex_info.pVertexBindingDescriptions = VK_NULL_HANDLE;
-	input_vertex_info.vertexAttributeDescriptionCount = 0;
-	input_vertex_info.pVertexAttributeDescriptions = VK_NULL_HANDLE;
-
-	//Viewport State
-	VkViewport viewport = {};
-	viewport.x = 0.0f;
-	viewport.y = 0.0f;
-	viewport.width = VkGlobal::surfaceCapabilities.currentExtent.width;
-	viewport.height = VkGlobal::surfaceCapabilities.currentExtent.height;
-	viewport.minDepth = 0.0f;
-	viewport.maxDepth = 1.0f;
-
-	VkRect2D scissor = {};
-	scissor.offset = { 0,0 };
-	scissor.extent = VkGlobal::surfaceCapabilities.currentExtent;
-
-	VkPipelineViewportStateCreateInfo viewport_create_info = {};
-	viewport_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-	viewport_create_info.viewportCount = 1;
-	viewport_create_info.pViewports = &viewport;
-	viewport_create_info.scissorCount = 1;
-	viewport_create_info.pScissors = &scissor;
-
-	//Rasterizer State
-	VkPipelineRasterizationStateCreateInfo rasterization_create_info = {};
-	rasterization_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-	rasterization_create_info.rasterizerDiscardEnable = VK_FALSE;
-	rasterization_create_info.polygonMode = VK_POLYGON_MODE_FILL;
-	rasterization_create_info.lineWidth = 1.0f;
-	rasterization_create_info.cullMode = VK_CULL_MODE_FRONT_BIT;
-	rasterization_create_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-	rasterization_create_info.depthClampEnable = VK_FALSE;
-	rasterization_create_info.depthBiasEnable = VK_FALSE;
-	rasterization_create_info.depthBiasClamp = 0.0f;
-	rasterization_create_info.depthBiasConstantFactor = 0.0f;
-	rasterization_create_info.depthBiasSlopeFactor = 0.0f;
-
-	//Multisampling State
-	VkPipelineMultisampleStateCreateInfo multisample_create_info = {};
-	multisample_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-	multisample_create_info.sampleShadingEnable = VK_FALSE;
-	multisample_create_info.rasterizationSamples = VkGlobal::msaa;
-	multisample_create_info.minSampleShading = 1.0f;
-	multisample_create_info.pSampleMask = VK_NULL_HANDLE;
-	multisample_create_info.alphaToCoverageEnable = VK_FALSE;
-	multisample_create_info.alphaToOneEnable = VK_FALSE;
-
-	//Depth-Stencil State
-	VkPipelineDepthStencilStateCreateInfo depth_stencil_create_info = {};
-	depth_stencil_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-	depth_stencil_create_info.depthTestEnable = VK_FALSE;
-	depth_stencil_create_info.depthWriteEnable = VK_FALSE;
-	depth_stencil_create_info.depthCompareOp = VK_COMPARE_OP_LESS;
-	depth_stencil_create_info.depthBoundsTestEnable = VK_FALSE;
-	depth_stencil_create_info.minDepthBounds = 0.0f;
-	depth_stencil_create_info.maxDepthBounds = 1.0f;
-	depth_stencil_create_info.stencilTestEnable = VK_FALSE;
-
-	//Color Blending Attachment & State
-	VkPipelineColorBlendAttachmentState color_blend_attachment_state = {};
-	color_blend_attachment_state.colorWriteMask = 0xF; //<-- RGBA Flags on... although blend is disabled
-	color_blend_attachment_state.blendEnable = VK_FALSE;
-	color_blend_attachment_state.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_COLOR;
-	color_blend_attachment_state.dstColorBlendFactor = VK_BLEND_FACTOR_DST_COLOR;
-	color_blend_attachment_state.colorBlendOp = VK_BLEND_OP_ADD;
-	color_blend_attachment_state.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-	color_blend_attachment_state.dstAlphaBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;
-	color_blend_attachment_state.alphaBlendOp = VK_BLEND_OP_ADD;
-
-	VkPipelineColorBlendStateCreateInfo color_blend_create_info = {};
-	color_blend_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-	color_blend_create_info.logicOpEnable = VK_FALSE;
-	color_blend_create_info.logicOp = VK_LOGIC_OP_COPY;
-	color_blend_create_info.attachmentCount = 1;
-	color_blend_create_info.pAttachments = &color_blend_attachment_state;
-	color_blend_create_info.blendConstants[0] = 0.0f;
-	color_blend_create_info.blendConstants[1] = 0.0f;
-	color_blend_create_info.blendConstants[2] = 0.0f;
-	color_blend_create_info.blendConstants[3] = 0.0f;
-
-	//Dynamic State [DISABLED.... But still showing for tutorial reasons that it exists]
-	VkPipelineDynamicStateCreateInfo dynamic_create_info = {};
-	dynamic_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-	dynamic_create_info.dynamicStateCount = 0;
-	dynamic_create_info.pDynamicStates = VK_NULL_HANDLE;
-
-	//Descriptor pipeline layout [NOTE: NEEDED FOR UNIFORM BUFFERS!, but for now not using.]
-	VkPipelineLayoutCreateInfo pipeline_layout_create_info = {};
-	pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipeline_layout_create_info.setLayoutCount = 1;
-	pipeline_layout_create_info.pSetLayouts = &vkImGui.descriptorSetLayout;
-	pipeline_layout_create_info.pushConstantRangeCount = 0;
-	pipeline_layout_create_info.pPushConstantRanges = nullptr;
-	VkResult r = vkCreatePipelineLayout(VkGlobal::device, &pipeline_layout_create_info, nullptr, &vkImGui.pipelineLayout);
-
-	//////////////////////////////////////////////////
-	//												//
-	//		FINALLY: GRAPHICS PIPELINE CREATION!	//
-	//												//
-	//////////////////////////////////////////////////
-
-	VkGraphicsPipelineCreateInfo pipeline_create_info = {};
-	pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-	pipeline_create_info.stageCount = 2;
-	pipeline_create_info.pStages = stage_create_info;
-	pipeline_create_info.pInputAssemblyState = &assembly_create_info;
-	pipeline_create_info.pVertexInputState = &input_vertex_info;
-	pipeline_create_info.pViewportState = &viewport_create_info;
-	pipeline_create_info.pRasterizationState = &rasterization_create_info;
-	pipeline_create_info.pMultisampleState = &multisample_create_info;
-	pipeline_create_info.pDepthStencilState = &depth_stencil_create_info;
-	pipeline_create_info.pColorBlendState = &color_blend_create_info;
-	pipeline_create_info.pDynamicState = VK_NULL_HANDLE;
-
-	pipeline_create_info.layout = vkImGui.pipelineLayout;
-	pipeline_create_info.renderPass = VkGlobal::renderPass;
-	pipeline_create_info.subpass = 0;
-
-	pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
-	pipeline_create_info.basePipelineIndex = -1;
-
-	vkCreateGraphicsPipelines(VkGlobal::device, VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr, &vkImGui.graphicsPipeline);
-
-	//Cleanup
-	vkDestroyShaderModule(VkGlobal::device, shader[VERTEX], nullptr);
-	vkDestroyShaderModule(VkGlobal::device, shader[FRAGMENT], nullptr);
-
-	return VK_SUCCESS;
-}
-VkResult ImGuiGlobal::Init_vkImGui()
+VkResult VkImGui::Init_vkImGui()
 {
 	//Prereq: Descriptor Pool
-	SetupDescriptorPool();
-	SetupRenderPass();
+	::SetupDescriptorPool();
+	::SetupRenderPass();
 
-	vkImGui.clearColor.push_back({});
+	VkImGui::clearColor.push_back({});
 
 	//Setup the initinfo
 	ImGui_ImplVulkan_InitInfo init_info = {};
@@ -481,49 +518,40 @@ VkResult ImGuiGlobal::Init_vkImGui()
 	init_info.Device = VkGlobal::device;
 	init_info.QueueFamily = VkGlobal::GRAPHICS_INDEX;
 	init_info.Queue = VkGlobal::queueGraphics;
-	init_info.PipelineCache = vkImGui.pipelineCache;
-	init_info.DescriptorPool = vkImGui.descriptorPoolImGui;
+	init_info.PipelineCache = ::pipelineCache;
+	init_info.DescriptorPool = ::descriptorPool;
 	init_info.Allocator = VK_NULL_HANDLE;
 	init_info.MinImageCount = VkGlobal::surfaceCapabilities.minImageCount;
 	init_info.ImageCount = VkGlobal::frameMax;
-	init_info.CheckVkResultFn = check_vk_result;
+	init_info.CheckVkResultFn = ::check_vk_result;
 	init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
 	//Initialize ImGui - Vulkan
-	if (!ImGui_ImplVulkan_Init(&init_info, vkImGui.renderPass)) {
+	if (!ImGui_ImplVulkan_Init(&init_info, VkImGui::renderPass)) {
 		VK_ASSERT(VK_ERROR_FEATURE_NOT_PRESENT);
 		return VK_ERROR_FEATURE_NOT_PRESENT;
 	}
 
 	//Setup Command Objects
-	SetupCommandObjects();
+	::SetupCommandObjects();
 
 	//Setup ImGui Font
-	SetupFonts();
+	::SetupFonts();
 
 	//Setup Image
-	SetupImage();
+	::SetupImage();
 
 	//Setup Framebuffer
-	SetupFrameBuffer();
+	::SetupFrameBuffer();
 
 	//Setup Sync Objects
-	SetupSyncObjects();
+	::SetupSyncObjects();
 
 	//Setup Descriptor Set
-	SetupDescriptors();
+	::SetupDescriptors();
 
 	//Setup Pipelines
-	SetupPipelines();
+	::SetupPipelines();
 
 	return VK_SUCCESS;
-}
-
-void ImGuiGlobal::check_vk_result(VkResult err) {
-	if (err == 0) return;
-#ifdef _DEBUG
-	printf("VkResult %d\n", err);
-#endif
-	if (err < 0)
-		abort();
 }

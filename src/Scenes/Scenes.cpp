@@ -432,16 +432,16 @@ void StartScene::Render(const float& _dtRatio) {
 		VkResult frame_result = vkAcquireNextImageKHR(VkGlobal::device, swapchain, 0xFFFFFFFFFFFFFFFF, sceneSemaphoreRF[frameCurrent], VK_NULL_HANDLE, &frameCurrent);
 
 		//Render to Texture ImGui
-		FrameStart(vkImGui.commandBuffer[frameCurrent], vkImGui.renderPass, vkImGui.frameBuffer, vkImGui.clearColor);
+		FrameStart(VkImGui::commandBuffer[frameCurrent], VkImGui::renderPass, VkImGui::frameBuffer, VkImGui::clearColor);
 		RenderImGui();
-		FrameEnd(vkImGui.commandBuffer[frameCurrent], sceneSemaphoreRF[frameCurrent], vkImGui.semaphore[frameCurrent], vkImGui.fence[frameCurrent]);
+		FrameEnd(VkImGui::commandBuffer[frameCurrent], sceneSemaphoreRF[frameCurrent], VkImGui::semaphore[frameCurrent], VkImGui::fence[frameCurrent]);
 
 		//Render to Swapchain
 		FrameStart(commandBuffer[frameCurrent], renderPass, swapchainFramebuffer[frameCurrent], clearColor);
-		vkCmdBindDescriptorSets(commandBuffer[frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, vkImGui.pipelineLayout, 0, 1, &vkImGui.descriptorSet[frameCurrent], 0, nullptr);
-		vkCmdBindPipeline(commandBuffer[frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, vkImGui.graphicsPipeline);
+		vkCmdBindDescriptorSets(commandBuffer[frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, VkImGui::pipelineLayout, 0, 1, &VkImGui::descriptorSet[frameCurrent], 0, nullptr);
+		vkCmdBindPipeline(commandBuffer[frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, VkImGui::graphicsPipeline);
 		vkCmdDraw(commandBuffer[frameCurrent], 3, 1, 0, 0);
-		FrameEnd(commandBuffer[frameCurrent], vkImGui.semaphore[frameCurrent], sceneSemaphoreRF[frameCurrent], sceneFence[frameCurrent]);
+		FrameEnd(commandBuffer[frameCurrent], VkImGui::semaphore[frameCurrent], sceneSemaphoreRF[frameCurrent], sceneFence[frameCurrent]);
 
 		//Present
 		Present();
@@ -463,7 +463,7 @@ void StartScene::RenderImGui() {
 
 	//Set to Render
 	ImGui::Render();
-	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vkImGui.commandBuffer[frameCurrent]);
+	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), VkImGui::commandBuffer[frameCurrent]);
 }
 
 void StartScene::Initialize() {
