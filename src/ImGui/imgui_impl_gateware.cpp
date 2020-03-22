@@ -1,13 +1,12 @@
-#include "imgui_impl_gateware.h"
 // dear imgui: Platform Binding for Gateware (64 bit applications only)
 // This needs to be used along with a Renderer (e.g. DirectX11, OpenGL3, Vulkan..)
 
 // Implemented features:
 // [X] NOTHING! :D
 
-// #include "imgui.h"
-// #include "imgui_impl_win32.h"
-// #include "gateware.h"
+#include "imgui.h"
+#include "imgui_impl_gateware.h"
+#include "gateware.h"
 
 // Gateware Data
 static GW::SYSTEM::GWindow			g_GWindow;

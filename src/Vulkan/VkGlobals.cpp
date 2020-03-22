@@ -555,6 +555,8 @@ VkResult ImGuiGlobal::Init_vkImGui()
 	SetupDescriptorPool();
 	SetupRenderPass();
 
+	vkImGui.clearColor.push_back({});
+
 	//Setup the initinfo
 	ImGui_ImplVulkan_InitInfo init_info = {};
 	init_info.Instance = vkGlobal.instance;

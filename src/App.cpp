@@ -1,6 +1,6 @@
-#include "../VkGlobals.h"
-#include "../Scenes/Scenes.h"
-#include "VkCore.h"
+#include "Vulkan/VkGlobals.h"
+#include "Scenes/Scenes.h"
+#include "Vulkan/VkCore.h"
 #include <chrono>
 
 namespace {

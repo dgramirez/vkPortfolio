@@ -43,7 +43,7 @@ protected:
 	VkResult CreateCommandPreset();
 	VkResult CreateSyncPreset();
 
-	void FrameStart(const VkCommandBuffer& _commandBuffer, const VkRenderPass& _renderPass, const VkFramebuffer& _frameBuffer);
+	void FrameStart(const VkCommandBuffer& _commandBuffer, const VkRenderPass& _renderPass, const VkFramebuffer& _frameBuffer, const std::vector<VkClearValue>& _clearColor);
 	void FrameEnd(const VkCommandBuffer& _commandBuffer, const VkSemaphore& _startSemaphore, const VkSemaphore& _nextSemaphore, const VkFence& _fence);
 	virtual void Present();
 	virtual void RenderImGui() {}
@@ -83,6 +83,7 @@ public:
 private:
 	bool canRender = true;
 	bool yes = true;
+	std::vector<VkClearValue> clearColor;
 };
 
 #endif

@@ -1,12 +1,11 @@
 #include "Scenes.h"
-#include "../VkGlobals.h"
+#include "../Vulkan/VkGlobals.h"
 
 ////////////////////////
 // Scene Menu Methods //
 ////////////////////////
 SceneMenu::SceneMenu(Scene*& _pScene)
 	: m_CurrentScene(_pScene) { }
-
 void SceneMenu::RenderImGui() {
 
 }
@@ -333,7 +332,7 @@ VkResult Scene::CreateSyncPreset()
 	return r;
 }
 
-void Scene::FrameStart(const VkCommandBuffer & _commandBuffer, const VkRenderPass& _renderPass, const VkFramebuffer& _frameBuffer) {
+void Scene::FrameStart(const VkCommandBuffer & _commandBuffer, const VkRenderPass& _renderPass, const VkFramebuffer& _frameBuffer, const std::vector<VkClearValue>& _clearColor) {
 	//Create the Command Buffer's Begin Info
 	VkCommandBufferBeginInfo command_buffer_begin_info = {};
 	command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -341,17 +340,14 @@ void Scene::FrameStart(const VkCommandBuffer & _commandBuffer, const VkRenderPas
 	command_buffer_begin_info.pInheritanceInfo = nullptr;
 	vkBeginCommandBuffer(_commandBuffer, &command_buffer_begin_info);
 
-	//Setup Clear Color
-	VkClearValue clear_value = {};
-
 	//Setup the Render Pass
 	VkRenderPassBeginInfo render_pass_begin_info = {};
 	render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	render_pass_begin_info.renderPass = _renderPass;
 	render_pass_begin_info.framebuffer = _frameBuffer; //swapchainFramebuffer[frameCurrent]
 	render_pass_begin_info.renderArea.extent = surfaceExtent2D;
-	render_pass_begin_info.clearValueCount = 1;
-	render_pass_begin_info.pClearValues = &clear_value;
+	render_pass_begin_info.clearValueCount = _clearColor.size();
+	render_pass_begin_info.pClearValues = _clearColor.data();
 
 	//Begin the Render Pass
 	vkCmdBeginRenderPass(_commandBuffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
@@ -425,22 +421,22 @@ StartScene::~StartScene() {
 }
 
 void StartScene::Render(const float& _dtRatio) {
-
+	
 	if (canRender)
 	{
 		//Wait for Queue to be ready
-		vkWaitForFences(vkGlobal.device, 1, &sceneFence[frameCurrent], VK_TRUE, ~(static_cast<uint64_t>(0)));
+		vkWaitForFences(vkGlobal.device, 1, &sceneFence[frameCurrent], VK_TRUE, 0xFFFFFFFFFFFFFFFF);
 
 		//Get the Frame Result
-		VkResult frame_result = vkAcquireNextImageKHR(vkGlobal.device, swapchain, ~(0ull), sceneSemaphoreRF[frameCurrent], VK_NULL_HANDLE, &frameCurrent);
+		VkResult frame_result = vkAcquireNextImageKHR(vkGlobal.device, swapchain, 0xFFFFFFFFFFFFFFFF, sceneSemaphoreRF[frameCurrent], VK_NULL_HANDLE, &frameCurrent);
 
 		//Render to Texture ImGui
-		FrameStart(vkImGui.commandBuffer[frameCurrent], vkImGui.renderPass, vkImGui.frameBuffer);
+		FrameStart(vkImGui.commandBuffer[frameCurrent], vkImGui.renderPass, vkImGui.frameBuffer, vkImGui.clearColor);
 		RenderImGui();
 		FrameEnd(vkImGui.commandBuffer[frameCurrent], sceneSemaphoreRF[frameCurrent], vkImGui.semaphore[frameCurrent], vkImGui.fence[frameCurrent]);
 
 		//Render to Swapchain
-		FrameStart(commandBuffer[frameCurrent], renderPass, swapchainFramebuffer[frameCurrent]);
+		FrameStart(commandBuffer[frameCurrent], renderPass, swapchainFramebuffer[frameCurrent], clearColor);
 		vkCmdBindDescriptorSets(commandBuffer[frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, vkImGui.pipelineLayout, 0, 1, &vkImGui.descriptorSet[frameCurrent], 0, nullptr);
 		vkCmdBindPipeline(commandBuffer[frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, vkImGui.graphicsPipeline);
 		vkCmdDraw(commandBuffer[frameCurrent], 3, 1, 0, 0);
@@ -487,6 +483,8 @@ void StartScene::Initialize() {
 	vkGlobal.frameMax = frameMax;
 	vkGlobal.swapchain = swapchain;
 	vkGlobal.renderPass = renderPass;
+	clearColor.resize(1);
+	clearColor[0] = {0.098f, 0.098f, 0.439f, 1.0f};
 
 	//4: Create Command Pool & Buffers
 	CreateCommandPreset();

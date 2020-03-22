@@ -1,5 +1,5 @@
 #include "VkCore.h"
-#include "../VkGlobals.h"
+#include "VkGlobals.h"
 
 namespace VkCore {
 #ifdef _DEBUG
