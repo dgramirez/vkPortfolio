@@ -1,4 +1,4 @@
-#include "../vkGlobals.h"
+#include "../VkGlobals.h"
 #include "../Scenes/Scenes.h"
 #include "VkCore.h"
 #include <chrono>

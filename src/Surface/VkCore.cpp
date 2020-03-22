@@ -1,5 +1,5 @@
 #include "VkCore.h"
-#include "../vkGlobals.h"
+#include "../VkGlobals.h"
 
 #define VK_FAIL(vk_result) if (vk_result) return false;
 

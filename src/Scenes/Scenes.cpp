@@ -1,5 +1,5 @@
 #include "Scenes.h"
-#include "../vkGlobals.h"
+#include "../VkGlobals.h"
 
 ////////////////////////
 // Scene Menu Methods //
@@ -457,7 +457,7 @@ void StartScene::RenderImGui() {
 
 	ImGui::Begin("Test Menu");
 	ImGui::Checkbox("Show About Window", &yes);
-	ImGui::ShowDemoWindow(&yes);
+	ImGui::ShowMetricsWindow(&yes);
 
 	bool leave = ImGui::Button("Exit");
 	if (leave)

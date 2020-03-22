@@ -1,4 +1,4 @@
-#include "vkGlobals.h"
+#include "VkGlobals.h"
 
 ImGuiGlobal vkImGui;
 
