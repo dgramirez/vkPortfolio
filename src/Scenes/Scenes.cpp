@@ -342,7 +342,7 @@ void Scene::FrameStart(const VkCommandBuffer & _commandBuffer, const VkRenderPas
 	vkBeginCommandBuffer(_commandBuffer, &command_buffer_begin_info);
 
 	//Setup Clear Color
-	VkClearValue clear_value = { 0.098f, .098f, .439f, 1.0f };
+	VkClearValue clear_value = {};
 
 	//Setup the Render Pass
 	VkRenderPassBeginInfo render_pass_begin_info = {};
@@ -441,7 +441,9 @@ void StartScene::Render(const float& _dtRatio) {
 
 		//Render to Swapchain
 		FrameStart(commandBuffer[frameCurrent], renderPass, swapchainFramebuffer[frameCurrent]);
-//		MyStuff
+		vkCmdBindDescriptorSets(commandBuffer[frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, vkImGui.pipelineLayout, 0, 1, &vkImGui.descriptorSet[frameCurrent], 0, nullptr);
+		vkCmdBindPipeline(commandBuffer[frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, vkImGui.graphicsPipeline);
+		vkCmdDraw(commandBuffer[frameCurrent], 3, 1, 0, 0);
 		FrameEnd(commandBuffer[frameCurrent], vkImGui.semaphore[frameCurrent], sceneSemaphoreRF[frameCurrent], sceneFence[frameCurrent]);
 
 		//Present
@@ -484,6 +486,7 @@ void StartScene::Initialize() {
 	CreateSwapchainPresetBasic();
 	vkGlobal.frameMax = frameMax;
 	vkGlobal.swapchain = swapchain;
+	vkGlobal.renderPass = renderPass;
 
 	//4: Create Command Pool & Buffers
 	CreateCommandPreset();

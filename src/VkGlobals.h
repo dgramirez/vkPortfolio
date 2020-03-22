@@ -6,10 +6,11 @@ struct VkGlobal {
 	VkInstance instance = {};
 	VkSurfaceKHR surface = {};
 	VkPhysicalDevice physicalDevice = {};
+	VkSampleCountFlagBits msaa = VK_SAMPLE_COUNT_1_BIT;
 	VkDevice device = {};
 	VmaAllocator allocator = {};
 	VkSwapchainKHR swapchain = {};
-	VkSampleCountFlagBits msaa = VK_SAMPLE_COUNT_1_BIT;
+	VkRenderPass renderPass = {};
 
 	//Queue Family Info
 	uint16_t GRAPHICS_INDEX = 0; VkQueue queueGraphics = {};
@@ -53,7 +54,7 @@ extern VkGlobal vkGlobal;
 struct ImGuiGlobal {
 	ImGui_ImplVulkan_InitInfo init_info = {};
 	VkPipelineCache pipelineCache;
-	VkDescriptorPool descriptorPool;
+	VkDescriptorPool descriptorPoolImGui;
 
 	VkCommandPool commandPool;
 	std::vector<VkCommandBuffer> commandBuffer;
@@ -63,6 +64,13 @@ struct ImGuiGlobal {
 	VkImageView imageView;
 	VkRenderPass renderPass;
 	VkFramebuffer frameBuffer;
+	VkSampler sampler;
+
+	VkDescriptorPool descriptorPool;
+	VkDescriptorSetLayout descriptorSetLayout;
+	std::vector<VkDescriptorSet> descriptorSet;
+	VkPipelineLayout pipelineLayout;
+	VkPipeline graphicsPipeline;
 
 	std::vector<VkFence> fence;
 	std::vector<VkSemaphore> semaphore;
