@@ -6,7 +6,7 @@
 
 #include "imgui.h"
 #include "imgui_impl_gateware.h"
-#include "gateware.h"
+#include "Gateware.h"
 
 // Gateware Data
 static GW::SYSTEM::GWindow			g_GWindow;
