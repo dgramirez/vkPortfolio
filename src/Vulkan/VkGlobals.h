@@ -39,7 +39,7 @@ struct VkGlobal {
 	static std::unordered_map<VkPhysicalDevice, VkPhysicalDeviceMemoryProperties> physicalDeviceMemoryPropertiesAll;
 
 	//Vulkan Surface Properties
-	static VkSurfaceCapabilitiesKHR surfaceCapabilities ;
+	static VkSurfaceCapabilitiesKHR surfaceCapabilities;
 	static std::vector<VkSurfaceFormatKHR> surfaceFormatsAll;
 	static std::vector<VkPresentModeKHR> surfacePresentModesAll;
 	static uint32_t frameMax;
@@ -47,6 +47,53 @@ struct VkGlobal {
 	//Helper Methods
 	static VkResult CreateImage(const VkFormat& _format, const VkExtent3D& _imageExtent, const VkSampleCountFlagBits& _samples, const VkImageTiling& _tiling, const VkImageUsageFlags& _usageFlags, const VkMemoryPropertyFlags& _memoryPropertyFlags, VkImage* _outImage, VkDeviceMemory* _outImageMemory);
 	static VkResult CreateImageView(const VkImage& _image, const VkFormat& _format, const VkImageAspectFlags& _imageAspectFlags, VkImageView* _outImageView);
+	static VkResult TransitionImageLayout(const VkCommandPool& _commandPool, const VkImage& _image, const VkFormat& _format, const VkImageLayout& _previousLayout, const VkImageLayout& _currentLayout);
+};
+
+struct VkSwapchain {
+	//Vulkan Swapchain-Based Objects
+	static VkSwapchainKHR swapchain;
+	static std::vector<VkImage> swapchainImage;
+	static std::vector<VkImageView> swapchainImageView;
+	static VkRenderPass renderPass;
+	static std::vector<VkFramebuffer> frameBuffer;
+	static std::vector<VkSemaphore> renderSemaphore;
+	static std::vector<VkSemaphore> presentSemaphore;
+	static std::vector<VkFence> fence;
+
+	//Setup Command Pool & Command Buffers
+	static VkCommandPool commandPool;
+	static std::vector<VkCommandBuffer> commandBuffer;
+
+	//Additioanl Buffers (Depth)
+	static VkFormat depthFormat;
+	static VkImage depthImage;
+	static VkImageView depthImageView;
+	static VkDeviceMemory depthMemory;
+
+	//Additional Buffers (MSAA)
+	static VkImage msaaImage;
+	static VkImageView msaaImageView;
+	static VkDeviceMemory msaaMemory;
+
+	//Current Surface Information
+	static VkSurfaceCapabilitiesKHR surfaceCapabilities;
+	static VkSurfaceFormatKHR surfaceFormat;
+	static VkPresentModeKHR surfacePresentMode;
+	static VkExtent2D surfaceExtent2D;
+	static VkExtent3D surfaceExtent3D;
+	static std::vector<VkClearValue> clearValue;
+
+	//Frame-Based Data
+	static uint32_t frameCurrent;
+	static uint32_t frameMax;
+	static uint32_t presetFlags;
+
+	//Swapchain Functions
+	static VkResult UpdateSurfaceData();
+	static VkResult CreatePreset();
+	static VkResult Destroy();
+	static VkResult Cleanup(const bool &_includeRenderPass);
 };
 
 //Defines for Windows
