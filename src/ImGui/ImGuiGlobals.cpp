@@ -293,8 +293,8 @@ namespace {
 		VkPipelineShaderStageCreateInfo stage_create_info[2] = {};
 
 		//Create the GFile
-		const char* vsFilename = "../../../src/Scenes/A_StartScene/imgui.vert.spv";
-		const char* psFilename = "../../../src/Scenes/A_StartScene/imgui.frag.spv";
+		const char* vsFilename = "../../../src/ImGui/imgui.vert.spv";
+		const char* psFilename = "../../../src/ImGui/imgui.frag.spv";
 
 		GW::SYSTEM::GFile ShaderFile; ShaderFile.Create();
 
@@ -303,8 +303,10 @@ namespace {
 		ShaderFile.GetFileSize(vsFilename, vsFileSize);
 
 		//Open the Vertex Shader
-		if (-ShaderFile.OpenBinaryRead(vsFilename))
+		if (-ShaderFile.OpenBinaryRead(vsFilename)) {
+			VK_ASSERT(VK_ERROR_FEATURE_NOT_PRESENT);
 			return VK_ERROR_FEATURE_NOT_PRESENT;
+		}
 
 		//Copy the Contents of the Vertex Shader
 		char* tempShaderFile = new char[vsFileSize];
@@ -315,7 +317,11 @@ namespace {
 		vsModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 		vsModuleCreateInfo.codeSize = vsFileSize;
 		vsModuleCreateInfo.pCode = reinterpret_cast<const uint32_t*>(tempShaderFile);
-		vkCreateShaderModule(VkGlobal::device, &vsModuleCreateInfo, VK_NULL_HANDLE, &shader[VERTEX]);
+		VkResult r = vkCreateShaderModule(VkGlobal::device, &vsModuleCreateInfo, VK_NULL_HANDLE, &shader[VERTEX]);
+		if (r) {
+			VK_ASSERT(r);
+			return r;
+		}
 
 		//Create Stage Info for Vertex Shader
 		stage_create_info[VERTEX].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -332,8 +338,10 @@ namespace {
 		ShaderFile.GetFileSize(psFilename, psFileSize);
 
 		//Open the Fragment Shader
-		if (-ShaderFile.OpenBinaryRead(psFilename))
+		if (-ShaderFile.OpenBinaryRead(psFilename)) {
+			VK_ASSERT(VK_ERROR_FEATURE_NOT_PRESENT);
 			return VK_ERROR_FEATURE_NOT_PRESENT;
+		}
 
 		//Copy the Contents of the Fragment Shader
 		tempShaderFile = new char[psFileSize];
@@ -344,7 +352,11 @@ namespace {
 		psModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 		psModuleCreateInfo.codeSize = psFileSize;
 		psModuleCreateInfo.pCode = reinterpret_cast<const uint32_t*>(tempShaderFile);
-		vkCreateShaderModule(VkGlobal::device, &psModuleCreateInfo, VK_NULL_HANDLE, &shader[FRAGMENT]);
+		r = vkCreateShaderModule(VkGlobal::device, &psModuleCreateInfo, VK_NULL_HANDLE, &shader[FRAGMENT]);
+		if (r) {
+			VK_ASSERT(r);
+			return r;
+		}
 
 		//Create Stage Info for Fragment Shader
 		stage_create_info[FRAGMENT].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -460,7 +472,11 @@ namespace {
 		pipeline_layout_create_info.pSetLayouts = &VkImGui::descriptorSetLayout;
 		pipeline_layout_create_info.pushConstantRangeCount = 0;
 		pipeline_layout_create_info.pPushConstantRanges = nullptr;
-		VkResult r = vkCreatePipelineLayout(VkGlobal::device, &pipeline_layout_create_info, nullptr, &VkImGui::pipelineLayout);
+		r = vkCreatePipelineLayout(VkGlobal::device, &pipeline_layout_create_info, nullptr, &VkImGui::pipelineLayout);
+		if (r) {
+			VK_ASSERT(r);
+			return r;
+		}
 
 		//////////////////////////////////////////////////
 		//												//
@@ -488,7 +504,11 @@ namespace {
 		pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
 		pipeline_create_info.basePipelineIndex = -1;
 
-		vkCreateGraphicsPipelines(VkGlobal::device, VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr, &VkImGui::graphicsPipeline);
+		r = vkCreateGraphicsPipelines(VkGlobal::device, VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr, &VkImGui::graphicsPipeline);
+		if (r) {
+			VK_ASSERT(r);
+			return r;
+		}
 
 		//Cleanup
 		vkDestroyShaderModule(VkGlobal::device, shader[VERTEX], nullptr);
