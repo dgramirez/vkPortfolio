@@ -90,12 +90,6 @@ namespace VkCore {
 #else
 	//Initialization
 	VkResult VkDebug::Init() {
-		//Clear All Layers.
-		VkGlobal::instanceLayersActive.clear();
-
-		//Clear Capacity.
-		VkGlobal::instanceLayersActive.shrink_to_fit();
-
 		return VK_SUCCESS;
 	}
 

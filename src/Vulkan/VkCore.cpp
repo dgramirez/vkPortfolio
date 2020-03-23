@@ -108,6 +108,7 @@ VkResult VulkanPrereq() {
 	/////////////////////////////////////////////////
 	iExt.push_back("VK_EXT_debug_report");
 	iLyr.push_back("VK_LAYER_LUNARG_standard_validation");
+	iLyr.push_back("VK_LAYER_RENDERDOC_Capture");
 
 	//Verify the instance extensions can be found
 	uint32_t count = 0;
@@ -138,6 +139,14 @@ VkResult VulkanPrereq() {
 	//Record the active extensions and layers
 	VkGlobal::instanceExtensionsActive = iExt;
 	VkGlobal::instanceLayersActive = iLyr;
+
+#if !defined(_DEBUG)
+	//Clear All Layers.
+	VkGlobal::instanceLayersActive.clear();
+
+	//Clear Capacity.
+	VkGlobal::instanceLayersActive.shrink_to_fit();
+#endif
 
 	return VK_SUCCESS;
 }
