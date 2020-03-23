@@ -237,8 +237,7 @@ namespace {
 }
 
 //VkGlobal Functions
-VkResult VkGlobal::CreateImage(const VkFormat& _format, const VkExtent3D& _imageExtent, const VkSampleCountFlagBits& _samples, const VkImageTiling& _tiling, const VkImageUsageFlags& _usageFlags, const VkMemoryPropertyFlags& _memoryPropertyFlags, VkImage* _outImage, VkDeviceMemory* _outImageMemory)
-{
+VkResult VkGlobal::CreateImage(const VkFormat& _format, const VkExtent3D& _imageExtent, const VkSampleCountFlagBits& _samples, const VkImageTiling& _tiling, const VkImageUsageFlags& _usageFlags, const VkMemoryPropertyFlags& _memoryPropertyFlags, VkImage* _outImage, VkDeviceMemory* _outImageMemory) {
 	//Create image info
 	VkImageCreateInfo create_info = {};
 	create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -300,8 +299,7 @@ VkResult VkGlobal::CreateImage(const VkFormat& _format, const VkExtent3D& _image
 	//Image Creation has been successful!
 	return r;
 }
-VkResult VkGlobal::CreateImageView(const VkImage& _image, const VkFormat& _format, const VkImageAspectFlags& _imageAspectFlags, VkImageView* _outImageView)
-{
+VkResult VkGlobal::CreateImageView(const VkImage& _image, const VkFormat& _format, const VkImageAspectFlags& _imageAspectFlags, VkImageView* _outImageView) {
 	//Image View Create Info
 	VkImageViewCreateInfo create_info = {};
 	create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -445,8 +443,7 @@ VkResult VkGlobal::TransitionImageLayout(const VkCommandPool& _commandPool, cons
 }
 
 //VkSwapchain Functions
-VkResult VkSwapchain::UpdateSurfaceData()
-{
+VkResult VkSwapchain::UpdateSurfaceData() {
 	//Gather The Surface Capabilities
 	VkResult r = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(VkGlobal::physicalDevice, VkGlobal::surface, &VkGlobal::surfaceCapabilities);
 	if (r) {
@@ -490,6 +487,71 @@ VkResult VkSwapchain::UpdateSurfaceData()
 	VK_ASSERT(r);
 	return r;
 }
+VkResult VkSwapchain::CreateCommandAndSyncBuffers()
+{
+	//Command Pool's Create Info
+	VkCommandPoolCreateInfo create_info = {};
+	create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+	create_info.queueFamilyIndex = VkGlobal::GRAPHICS_INDEX;
+
+	VkResult r = vkCreateCommandPool(VkGlobal::device, &create_info, nullptr, &commandPool);
+	if (r) {
+		VK_ASSERT(r);
+		return r;
+	}
+
+	//Allocate Command buffer Information
+	VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
+	command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	command_buffer_allocate_info.commandPool = commandPool;
+	command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	command_buffer_allocate_info.commandBufferCount = frameMax;
+
+	//Create Command Buffer
+	commandBuffer.resize(frameMax);
+	r = vkAllocateCommandBuffers(VkGlobal::device, &command_buffer_allocate_info, commandBuffer.data());
+	if (r) {
+		VK_ASSERT(r);
+		return r;
+	}
+
+	//Semaphore Info Create
+	VkSemaphoreCreateInfo semaphore_create_info = {};
+	semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+	//Fence Info Create
+	VkFenceCreateInfo fence_create_info = {};
+	fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+	//Resize Semaphores
+	renderSemaphore.resize(frameMax);
+	presentSemaphore.resize(frameMax);
+	fence.resize(frameMax);
+
+	//Create the Semaphores and Fences
+	for (unsigned int i = 0; i < frameMax; ++i) {
+		r = vkCreateSemaphore(VkGlobal::device, &semaphore_create_info, nullptr, &renderSemaphore[i]);
+		if (r) {
+			VK_ASSERT(r);
+			return r;
+		}
+		r = vkCreateSemaphore(VkGlobal::device, &semaphore_create_info, nullptr, &presentSemaphore[i]);
+		if (r) {
+			VK_ASSERT(r);
+			return r;
+		}
+		r = vkCreateFence(VkGlobal::device, &fence_create_info, nullptr, &fence[i]);
+		if (r) {
+			VK_ASSERT(r);
+			return r;
+		}
+	}
+
+	//Semaphores and Fences has been created successfully!
+	return r;
+}
 VkResult VkSwapchain::CreatePreset()
 {
 	//Create The Swapchain
@@ -529,8 +591,7 @@ VkResult VkSwapchain::CreatePreset()
 	VK_ASSERT(r);
 	return r;
 }
-VkResult VkSwapchain::Destroy()
-{
+VkResult VkSwapchain::Destroy() {
 	//Device Wait
 	vkDeviceWaitIdle(VkGlobal::device);
 

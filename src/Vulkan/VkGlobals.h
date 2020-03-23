@@ -1,5 +1,3 @@
-#include "imgui_impl_vulkan.h"
-
 struct VkGlobal {
 	//Vulkan Objects
 	static VkInstance instance;
@@ -91,6 +89,7 @@ struct VkSwapchain {
 
 	//Swapchain Functions
 	static VkResult UpdateSurfaceData();
+	static VkResult CreateCommandAndSyncBuffers();
 	static VkResult CreatePreset();
 	static VkResult Destroy();
 	static VkResult Cleanup(const bool &_includeRenderPass);
