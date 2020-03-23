@@ -1,7 +1,7 @@
 struct VkImGui {
 	//Render to Texture Necessities
 	static VkImage image;
-	static VkDeviceMemory memory;
+	static VkDeviceMemory imageMemory;
 	static VkImageView imageView;
 	static VkRenderPass renderPass;
 	static VkFramebuffer frameBuffer;
@@ -23,5 +23,6 @@ struct VkImGui {
 	static ImGui_ImplVulkan_InitInfo init_info;
 
 	//Static Functions
-	static VkResult Init_vkImGui();
+	static VkResult Init();
+	static VkResult Cleanup();
 };

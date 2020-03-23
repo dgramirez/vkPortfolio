@@ -2,7 +2,9 @@
 // This needs to be used along with a Renderer (e.g. DirectX11, OpenGL3, Vulkan..)
 
 // Implemented features:
-// [X] NOTHING! :D
+// [X] Just the Base Stuff
+// [ ] Works just as well with Linux
+// [ ] Works just as well with Mac
 
 #include "imgui.h"
 #include "imgui_impl_gateware.h"

@@ -32,9 +32,10 @@ SceneMenu::SceneMenu(Scene*& _pScene)
 	VkSwapchain::CreatePreset();
 
 	//6.) Initialize ImGui for Vulkan
-	VkImGui::Init_vkImGui();
+	VkImGui::Init();
 }
 SceneMenu::~SceneMenu() {
+	VkImGui::Cleanup();
 	VkSwapchain::Destroy();
 }
 

@@ -3,7 +3,7 @@
 
 //Render to Texture Necessities
 VkImage VkImGui::image = {};
-VkDeviceMemory VkImGui::memory = {};
+VkDeviceMemory VkImGui::imageMemory = {};
 VkImageView VkImGui::imageView = {};
 VkRenderPass VkImGui::renderPass = {};
 VkFramebuffer VkImGui::frameBuffer = {};
@@ -150,7 +150,7 @@ namespace {
 		return err;
 	}
 	VkResult SetupImage() {
-		VkResult r = VkGlobal::CreateImage(VK_FORMAT_B8G8R8A8_UNORM, VkSwapchain::surfaceExtent3D, VkGlobal::msaa, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &VkImGui::image, &VkImGui::memory);
+		VkResult r = VkGlobal::CreateImage(VK_FORMAT_B8G8R8A8_UNORM, VkSwapchain::surfaceExtent3D, VkGlobal::msaa, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &VkImGui::image, &VkImGui::imageMemory);
 		r = VkGlobal::CreateImageView(VkImGui::image, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, &VkImGui::imageView);
 		return VK_SUCCESS;
 	}
@@ -518,7 +518,7 @@ namespace {
 	}
 }
 
-VkResult VkImGui::Init_vkImGui()
+VkResult VkImGui::Init()
 {
 	//Setup the initinfo
 	init_info = {};
@@ -566,6 +566,103 @@ VkResult VkImGui::Init_vkImGui()
 
 	//Setup Pipelines
 	::SetupPipelines();
+
+	return VK_SUCCESS;
+}
+VkResult VkImGui::Cleanup() {
+	//Wait for Device to finish
+	vkDeviceWaitIdle(VkGlobal::device);
+
+	//Destroy Pipelines
+	if (VkImGui::graphicsPipeline) {
+		vkDestroyPipeline(VkGlobal::device, VkImGui::graphicsPipeline, VK_NULL_HANDLE);
+		VkImGui::graphicsPipeline = VK_NULL_HANDLE;
+	}
+	if (VkImGui::pipelineLayout) {
+		vkDestroyPipelineLayout(VkGlobal::device, VkImGui::pipelineLayout, VK_NULL_HANDLE);
+		VkImGui::pipelineLayout = VK_NULL_HANDLE;
+	}
+
+	//Cleanup Descriptor Stuff
+	if (VkImGui::descriptorSetLayout) {
+		vkDestroyDescriptorSetLayout(VkGlobal::device, VkImGui::descriptorSetLayout, VK_NULL_HANDLE);
+		VkImGui::descriptorSetLayout = VK_NULL_HANDLE;
+	}
+	if (VkImGui::descriptorPool) {
+		vkDestroyDescriptorPool(VkGlobal::device, VkImGui::descriptorPool, VK_NULL_HANDLE);
+		VkImGui::descriptorPool = VK_NULL_HANDLE;
+		VkImGui::descriptorSet.clear();
+		VkImGui::descriptorSet.shrink_to_fit();
+	}
+
+	//Cleanup Sync Objects
+	if (VkImGui::semaphore.size()) {
+		for (auto semaphore : VkImGui::semaphore) {
+			vkDestroySemaphore(VkGlobal::device, semaphore, VK_NULL_HANDLE);
+		}
+		VkImGui::semaphore.clear();
+		VkImGui::semaphore.shrink_to_fit();
+	}
+	if (VkImGui::fence.size()) {
+		for (auto fence : VkImGui::fence) {
+			vkDestroyFence(VkGlobal::device, fence, VK_NULL_HANDLE);
+		}
+		VkImGui::fence.clear();
+		VkImGui::fence.shrink_to_fit();
+	}
+
+	//Remove Framebuffer
+	if (VkImGui::frameBuffer) {
+		vkDestroyFramebuffer(VkGlobal::device, VkImGui::frameBuffer, VK_NULL_HANDLE);
+		VkImGui::frameBuffer = VK_NULL_HANDLE;
+	}
+
+	//Remove Sampler
+	if (VkImGui::sampler) {
+		vkDestroySampler(VkGlobal::device, VkImGui::sampler, VK_NULL_HANDLE);
+		VkImGui::sampler = VK_NULL_HANDLE;
+	}
+
+	//Remove Image View
+	if (VkImGui::imageView) {
+		vkDestroyImageView(VkGlobal::device, VkImGui::imageView, VK_NULL_HANDLE);
+		VkImGui::imageView = VK_NULL_HANDLE;
+	}
+
+	//Remove Image
+	if (VkImGui::image) {
+		vkDestroyImage(VkGlobal::device, VkImGui::image, VK_NULL_HANDLE);
+		vkFreeMemory(VkGlobal::device, VkImGui::imageMemory, VK_NULL_HANDLE);
+		VkImGui::image = VK_NULL_HANDLE;
+		VkImGui::imageMemory = 0;
+	}
+
+	//Remove Command Objects
+	if (VkImGui::commandPool) {
+		vkDestroyCommandPool(VkGlobal::device, VkImGui::commandPool, VK_NULL_HANDLE);
+		VkImGui::commandPool = VK_NULL_HANDLE;
+		VkImGui::commandBuffer.clear();
+		VkImGui::commandBuffer.shrink_to_fit();
+	}
+
+	//Cleanup ImGui Vulkan
+	ImGui_ImplVulkan_Shutdown();
+
+	//Remove Renderpass
+	if (VkImGui::renderPass) {
+		vkDestroyRenderPass(VkGlobal::device, VkImGui::renderPass, VK_NULL_HANDLE);
+		VkImGui::renderPass = VK_NULL_HANDLE;
+	}
+
+	//Remove Anonymouse Namespace's Descriptor Pool & Pipeline Cache
+	if (::descriptorPool) {
+		vkDestroyDescriptorPool(VkGlobal::device, ::descriptorPool, VK_NULL_HANDLE);
+		::descriptorPool = VK_NULL_HANDLE;
+	}
+	if (::pipelineCache) {
+		vkDestroyPipelineCache(VkGlobal::device, ::pipelineCache, VK_NULL_HANDLE);
+		::pipelineCache = VK_NULL_HANDLE;
+	}
 
 	return VK_SUCCESS;
 }

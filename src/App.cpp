@@ -18,6 +18,7 @@ namespace {
 	GW::INPUT::GInput GInput;
 
 	bool isRunnable = true;
+	bool isClean = false;
 }
 
 void GetResolution(uint32_t& _x, uint32_t& _y);
@@ -77,8 +78,11 @@ namespace App {
 			auto current_time = std::chrono::high_resolution_clock::now();
 			double accumulator = 0;
 
+			//Getter Validation
+			unsigned int __GetX;
+
 			//Process the Window Events
-			while (+GWindow.ProcessWindowEvents()) {
+			while (+GWindow.ProcessWindowEvents() && ImGui::GetCurrentContext()) {
 				//Get Frame Time
 				auto new_time = std::chrono::high_resolution_clock::now();
 				double frameTime = (new_time - current_time).count() * 1e-9;
@@ -114,9 +118,37 @@ namespace App {
 	}
 
 	void Cleanup() {
-		delete Menu;
-		delete CurrentScene;
+		//Cleanup the scene and Menu
+		if (Menu) {
+			//If The Scene is the Menu, just Eliminate the Menu
+			if (CurrentScene == Menu) {
+				delete Menu;
+				CurrentScene = Menu = nullptr;
+			}
+			else {
+				//Cleanup All Scene Objects
+				CurrentScene->Cleanup();
+
+				//Cleanup Swapchain, Command and Sync Objects
+				delete CurrentScene;
+				delete Menu;
+				CurrentScene = Menu = nullptr;
+			}
+		}
+
+		//Shutdown ImGui
+		ImGui_ImplGateware_Shutdown();
+		if (ImGui::GetCurrentContext())
+			ImGui::DestroyContext();
+
+		//Cleanup The rest of the Vulkan Objects
+		VkCore::vkCleanup();
+
+		//Destroy Gateware objects
 		GWindow = nullptr;
+
+		//Set isClean to True
+		isClean = true;
 	}
 }
 
@@ -166,14 +198,14 @@ void GWindowEvent() {
 
 	switch (winEvent) {
 	case GW::SYSTEM::GWindow::Events::DESTROY:
-		ImGui_ImplGateware_Shutdown();
-		CurrentScene->Cleanup();
-		VkCore::vkCleanup();
-
+		App::Cleanup();
 		break;
 	case GW::SYSTEM::GWindow::Events::DISPLAY_CLOSED:
 		//Destroy Instance
-		if (VkGlobal::instance) { vkDestroyInstance(VkGlobal::instance, nullptr); VkGlobal::instance = {}; }
+		if (VkGlobal::instance) { 
+			vkDestroyInstance(VkGlobal::instance, nullptr);
+			VkGlobal::instance = {};
+		}
 		break;
 	}
 }
