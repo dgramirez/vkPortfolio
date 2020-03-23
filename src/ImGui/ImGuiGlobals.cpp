@@ -452,10 +452,11 @@ namespace {
 		color_blend_create_info.blendConstants[3] = 0.0f;
 
 		//Dynamic State
+		VkDynamicState dynamicState[2] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 		VkPipelineDynamicStateCreateInfo dynamic_create_info = {};
 		dynamic_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-		dynamic_create_info.dynamicStateCount = 0;
-		dynamic_create_info.pDynamicStates = VK_NULL_HANDLE;
+		dynamic_create_info.dynamicStateCount = 2;
+		dynamic_create_info.pDynamicStates = dynamicState;
 
 		//Descriptor pipeline layout
 		VkPipelineLayoutCreateInfo pipeline_layout_create_info = {};
@@ -483,7 +484,7 @@ namespace {
 		pipeline_create_info.pMultisampleState = &multisample_create_info;
 		pipeline_create_info.pDepthStencilState = &depth_stencil_create_info;
 		pipeline_create_info.pColorBlendState = &color_blend_create_info;
-		pipeline_create_info.pDynamicState = VK_NULL_HANDLE;
+		pipeline_create_info.pDynamicState = &dynamic_create_info;
 
 		pipeline_create_info.layout = VkImGui::pipelineLayout;
 		pipeline_create_info.renderPass = VkGlobal::renderPass;
@@ -501,7 +502,6 @@ namespace {
 		return VK_SUCCESS;
 	}
 }
-
 
 VkResult VkImGui::Init_vkImGui()
 {
