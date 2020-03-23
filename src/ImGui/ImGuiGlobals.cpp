@@ -112,7 +112,7 @@ namespace {
 		vkCreateCommandPool(VkGlobal::device, &cpool_create_info, VK_NULL_HANDLE, &VkImGui::commandPool);
 
 		//Allocate Command buffer Information
-		VkImGui::commandBuffer.resize(VkGlobal::frameMax);
+		VkImGui::commandBuffer.resize(VkImGui::init_info.ImageCount);
 		VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
 		command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 		command_buffer_allocate_info.commandPool = VkImGui::commandPool;
@@ -150,12 +150,7 @@ namespace {
 		return err;
 	}
 	VkResult SetupImage() {
-		VkExtent3D ext = {
-			VkGlobal::surfaceCapabilities.currentExtent.width,
-			VkGlobal::surfaceCapabilities.currentExtent.height,
-			1
-		};
-		VkResult r = VkGlobal::CreateImage(VK_FORMAT_B8G8R8A8_UNORM, ext, VkGlobal::msaa, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &VkImGui::image, &VkImGui::memory);
+		VkResult r = VkGlobal::CreateImage(VK_FORMAT_B8G8R8A8_UNORM, VkSwapchain::surfaceExtent3D, VkGlobal::msaa, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &VkImGui::image, &VkImGui::memory);
 		r = VkGlobal::CreateImageView(VkImGui::image, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, &VkImGui::imageView);
 		return VK_SUCCESS;
 	}
@@ -189,12 +184,12 @@ namespace {
 		fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
 		//Resize Semaphores
-		VkImGui::fence.resize(VkGlobal::frameMax);
-		VkImGui::semaphore.resize(VkGlobal::frameMax);
+		VkImGui::fence.resize(VkImGui::init_info.ImageCount);
+		VkImGui::semaphore.resize(VkImGui::init_info.ImageCount);
 
 		//Create the Semaphores and Fences
 		VkResult r;
-		for (unsigned int i = 0; i < VkGlobal::frameMax; ++i) {
+		for (unsigned int i = 0; i < VkImGui::init_info.ImageCount; ++i) {
 			r = vkCreateSemaphore(VkGlobal::device, &semaphore_create_info, nullptr, &VkImGui::semaphore[i]);
 			if (r) {
 				return r;
@@ -235,11 +230,11 @@ namespace {
 		vkCreateDescriptorSetLayout(VkGlobal::device, &dsl_create_info, nullptr, &VkImGui::descriptorSetLayout);
 
 		//Descriptor Sets
-		VkImGui::descriptorSet.resize(VkGlobal::frameMax);
-		std::vector<VkDescriptorSetLayout> dsl_list(VkGlobal::frameMax, VkImGui::descriptorSetLayout);
+		VkImGui::descriptorSet.resize(VkImGui::init_info.ImageCount);
+		std::vector<VkDescriptorSetLayout> dsl_list(VkImGui::init_info.ImageCount, VkImGui::descriptorSetLayout);
 		VkDescriptorSetAllocateInfo ds_allocate_info = {};
 		ds_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		ds_allocate_info.descriptorSetCount = VkGlobal::frameMax;
+		ds_allocate_info.descriptorSetCount = VkImGui::init_info.ImageCount;
 		ds_allocate_info.descriptorPool = VkImGui::descriptorPool;
 		ds_allocate_info.pSetLayouts = &dsl_list[0];
 		vkAllocateDescriptorSets(VkGlobal::device, &ds_allocate_info, VkImGui::descriptorSet.data());
@@ -263,7 +258,7 @@ namespace {
 
 		vkCreateSampler(VkGlobal::device, &sampler_create_info, nullptr, &VkImGui::sampler);
 
-		for (uint32_t i = 0; i < VkGlobal::frameMax; ++i)
+		for (uint32_t i = 0; i < VkImGui::init_info.ImageCount; ++i)
 		{
 			VkDescriptorImageInfo dii = {};
 			dii.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -487,7 +482,7 @@ namespace {
 		pipeline_create_info.pDynamicState = &dynamic_create_info;
 
 		pipeline_create_info.layout = VkImGui::pipelineLayout;
-		pipeline_create_info.renderPass = VkGlobal::renderPass;
+		pipeline_create_info.renderPass = VkSwapchain::renderPass;
 		pipeline_create_info.subpass = 0;
 
 		pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
@@ -505,28 +500,27 @@ namespace {
 
 VkResult VkImGui::Init_vkImGui()
 {
-	//Prereq: Descriptor Pool
-	::SetupDescriptorPool();
-	::SetupRenderPass();
-
-	VkImGui::clearColor.push_back({});
-
 	//Setup the initinfo
-	ImGui_ImplVulkan_InitInfo init_info = {};
+	init_info = {};
 	init_info.Instance = VkGlobal::instance;
 	init_info.PhysicalDevice = VkGlobal::physicalDevice;
 	init_info.Device = VkGlobal::device;
 	init_info.QueueFamily = VkGlobal::GRAPHICS_INDEX;
 	init_info.Queue = VkGlobal::queueGraphics;
-	init_info.PipelineCache = ::pipelineCache;
-	init_info.DescriptorPool = ::descriptorPool;
 	init_info.Allocator = VK_NULL_HANDLE;
-	init_info.MinImageCount = VkGlobal::surfaceCapabilities.minImageCount;
-	init_info.ImageCount = VkGlobal::frameMax;
+	init_info.MinImageCount = VkSwapchain::surfaceCapabilities.minImageCount;
+	init_info.ImageCount = VkSwapchain::frameMax;
 	init_info.CheckVkResultFn = ::check_vk_result;
 	init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+	init_info.PipelineCache = ::pipelineCache;
+
+	//Setup Descriptor Pool
+	::SetupDescriptorPool();
+	init_info.DescriptorPool = ::descriptorPool;
 
 	//Initialize ImGui - Vulkan
+	VkImGui::clearColor.push_back({});
+	::SetupRenderPass();
 	if (!ImGui_ImplVulkan_Init(&init_info, VkImGui::renderPass)) {
 		VK_ASSERT(VK_ERROR_FEATURE_NOT_PRESENT);
 		return VK_ERROR_FEATURE_NOT_PRESENT;

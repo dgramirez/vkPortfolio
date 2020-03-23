@@ -43,7 +43,7 @@ protected:
 	VkResult CreateCommandPreset();
 	VkResult CreateSyncPreset();
 
-	void FrameStart(const VkCommandBuffer& _commandBuffer, const VkRenderPass& _renderPass, const VkFramebuffer& _frameBuffer, const std::vector<VkClearValue>& _clearColor);
+	void FrameStart(const VkCommandBuffer& _commandBuffer, const VkRenderPass& _renderPass, const VkExtent2D& _renderExtent, const VkFramebuffer& _frameBuffer, const std::vector<VkClearValue>& _clearColor);
 	void FrameEnd(const VkCommandBuffer& _commandBuffer, const VkSemaphore& _startSemaphore, const VkSemaphore& _nextSemaphore, const VkFence& _fence);
 	virtual void Present();
 	virtual void RenderImGui() {}
@@ -56,8 +56,9 @@ private:
 class SceneMenu : public Scene {
 public:
 	SceneMenu(Scene*& _pScene);
-	~SceneMenu() {}
+	~SceneMenu();
 
+	void Render(const float& _dtRatio) override;
 	void RenderImGui() override;
 	template<typename T>
 	void RegisterScene(const char* test_name) {
@@ -67,6 +68,7 @@ public:
 private:
 	Scene*& m_CurrentScene;
 	std::vector<std::pair<const char*, std::function<Scene*()>>> m_Scenes;
+	bool yes;
 };
 
 

@@ -81,6 +81,8 @@ struct VkSwapchain {
 	static VkExtent2D surfaceExtent2D;
 	static VkExtent3D surfaceExtent3D;
 	static std::vector<VkClearValue> clearValue;
+	static VkViewport viewport;
+	static VkRect2D scissor;
 
 	//Frame-Based Data
 	static uint32_t frameCurrent;
@@ -92,7 +94,7 @@ struct VkSwapchain {
 	static VkResult CreateCommandAndSyncBuffers();
 	static VkResult CreatePreset();
 	static VkResult Destroy();
-	static VkResult Cleanup(const bool &_includeRenderPass);
+	static VkResult Cleanup(const bool &_includeRenderPass = false);
 };
 
 //Defines for Windows

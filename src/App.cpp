@@ -1,6 +1,5 @@
 #include "Vulkan/VkGlobals.h"
 #include "Scenes/Scenes.h"
-#include "Scenes/A_StartScene/StartScene.h"
 #include "Vulkan/VkCore.h"
 #include "ImGui/ImGuiGlobals.h"
 #include <chrono>
@@ -66,9 +65,8 @@ namespace App {
 		//Ensure that its runnable
 		if (isRunnable) {
 			//Setup Menus
-			CurrentScene = new StartScene();
 			Menu = new SceneMenu(CurrentScene);
-			VkImGui::Init_vkImGui();
+			CurrentScene = Menu;
 
 			//Setup Time
 			double t = 0.0;

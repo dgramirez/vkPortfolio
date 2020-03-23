@@ -29,28 +29,28 @@ void StartScene::Render(const float& _dtRatio) {
 
 	if (canRender)
 	{
-		//Wait for Queue to be ready
-		vkWaitForFences(VkGlobal::device, 1, &sceneFence[frameCurrent], VK_TRUE, 0xFFFFFFFFFFFFFFFF);
-
-		//Get the Frame Result
-		VkResult frame_result = vkAcquireNextImageKHR(VkGlobal::device, swapchain, 0xFFFFFFFFFFFFFFFF, sceneSemaphoreRF[frameCurrent], VK_NULL_HANDLE, &frameCurrent);
-
-		//Render to Texture ImGui
-		FrameStart(VkImGui::commandBuffer[frameCurrent], VkImGui::renderPass, VkImGui::frameBuffer, VkImGui::clearColor);
-		RenderImGui();
-		FrameEnd(VkImGui::commandBuffer[frameCurrent], sceneSemaphoreRF[frameCurrent], VkImGui::semaphore[frameCurrent], VkImGui::fence[frameCurrent]);
-
-		//Render to Swapchain
-		FrameStart(commandBuffer[frameCurrent], renderPass, swapchainFramebuffer[frameCurrent], clearColor);
-		vkCmdSetViewport(commandBuffer[frameCurrent], 0, 1, &viewport);
-		vkCmdSetScissor(commandBuffer[frameCurrent], 0, 1, &scissor);
-		vkCmdBindDescriptorSets(commandBuffer[frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, VkImGui::pipelineLayout, 0, 1, &VkImGui::descriptorSet[frameCurrent], 0, nullptr);
-		vkCmdBindPipeline(commandBuffer[frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, VkImGui::graphicsPipeline);
-		vkCmdDraw(commandBuffer[frameCurrent], 3, 1, 0, 0);
-		FrameEnd(commandBuffer[frameCurrent], VkImGui::semaphore[frameCurrent], sceneSemaphoreRF[frameCurrent], sceneFence[frameCurrent]);
-
-		//Present
-		Present();
+//		//Wait for Queue to be ready
+//		vkWaitForFences(VkGlobal::device, 1, &sceneFence[frameCurrent], VK_TRUE, 0xFFFFFFFFFFFFFFFF);
+//
+//		//Get the Frame Result
+//		VkResult frame_result = vkAcquireNextImageKHR(VkGlobal::device, swapchain, 0xFFFFFFFFFFFFFFFF, sceneSemaphoreRF[frameCurrent], VK_NULL_HANDLE, &frameCurrent);
+//
+//		//Render to Texture ImGui
+//		FrameStart(VkImGui::commandBuffer[frameCurrent], VkImGui::renderPass, VkImGui::frameBuffer, VkImGui::clearColor);
+//		RenderImGui();
+//		FrameEnd(VkImGui::commandBuffer[frameCurrent], sceneSemaphoreRF[frameCurrent], VkImGui::semaphore[frameCurrent], VkImGui::fence[frameCurrent]);
+//
+//		//Render to Swapchain
+//		FrameStart(commandBuffer[frameCurrent], renderPass, swapchainFramebuffer[frameCurrent], clearColor);
+//		vkCmdSetViewport(commandBuffer[frameCurrent], 0, 1, &viewport);
+//		vkCmdSetScissor(commandBuffer[frameCurrent], 0, 1, &scissor);
+//		vkCmdBindDescriptorSets(commandBuffer[frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, VkImGui::pipelineLayout, 0, 1, &VkImGui::descriptorSet[frameCurrent], 0, nullptr);
+//		vkCmdBindPipeline(commandBuffer[frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, VkImGui::graphicsPipeline);
+//		vkCmdDraw(commandBuffer[frameCurrent], 3, 1, 0, 0);
+//		FrameEnd(commandBuffer[frameCurrent], VkImGui::semaphore[frameCurrent], sceneSemaphoreRF[frameCurrent], sceneFence[frameCurrent]);
+//
+//		//Present
+//		Present();
 	}
 }
 void StartScene::RenderImGui() {

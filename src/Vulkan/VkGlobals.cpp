@@ -163,6 +163,7 @@ namespace {
 		//Setup Variables
 		VkResult r;
 		std::vector<VkImageView> image_attachments;
+		VkSwapchain::frameBuffer.resize(VkSwapchain::frameMax);
 
 		//Loop through the Swapchain Frame Buffers and set their create info
 		for (unsigned int i = 0; i < VkSwapchain::frameMax; ++i) {
@@ -193,6 +194,16 @@ namespace {
 			//Create the Surface (With Results) [VK_SUCCESS = 0]
 			r = vkCreateFramebuffer(VkGlobal::device, &frame_buffer_create_info, nullptr, &VkSwapchain::frameBuffer[i]);
 		}
+
+		VkSwapchain::viewport.x = 0.0f;
+		VkSwapchain::viewport.y = 0.0f;
+		VkSwapchain::viewport.width = VkSwapchain::surfaceExtent2D.width;
+		VkSwapchain::viewport.height = VkSwapchain::surfaceExtent2D.height;
+		VkSwapchain::viewport.minDepth = 0.0f;
+		VkSwapchain::viewport.maxDepth = 1.0f;
+
+		VkSwapchain::scissor.offset = { 0,0 };
+		VkSwapchain::scissor.extent = VkSwapchain::surfaceExtent2D;
 
 		return r;
 	}
@@ -730,6 +741,8 @@ VkPresentModeKHR VkSwapchain::surfacePresentMode = {};
 VkExtent2D VkSwapchain::surfaceExtent2D = {};
 VkExtent3D VkSwapchain::surfaceExtent3D = {};
 std::vector<VkClearValue> VkSwapchain::clearValue;
+VkViewport VkSwapchain::viewport = {};
+VkRect2D VkSwapchain::scissor = {};
 
 //Frame-Based Data
 uint32_t VkSwapchain::frameCurrent = {};
