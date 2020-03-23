@@ -254,7 +254,9 @@ namespace {
 		/////////////////////////////////////////////////
 		iExt.push_back("VK_EXT_debug_report");
 		iLyr.push_back("VK_LAYER_LUNARG_standard_validation");
+		#ifdef _WIN32
 		iLyr.push_back("VK_LAYER_RENDERDOC_Capture");
+		#endif
 
 		//Verify the instance extensions can be found
 		uint32_t count = 0;

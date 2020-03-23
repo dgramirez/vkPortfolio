@@ -145,7 +145,7 @@ namespace App {
 		VkCore::vkCleanup();
 
 		//Destroy Gateware objects
-		GWindow = nullptr;
+//		GWindow = nullptr;
 
 		//Set isClean to True
 		isClean = true;
