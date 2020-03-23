@@ -563,7 +563,7 @@ VkResult VkSwapchain::CreateCommandAndSyncBuffers()
 	//Semaphores and Fences has been created successfully!
 	return r;
 }
-VkResult VkSwapchain::CreatePreset()
+VkResult VkSwapchain::CreatePreset(const bool& _includeRenderPass)
 {
 	//Create The Swapchain
 	VkResult r = ::CreateSwapchain();
@@ -591,10 +591,12 @@ VkResult VkSwapchain::CreatePreset()
 	}
 
 	//Create the RenderPass
-	r = ::CreateRenderPass();
-	if (r) {
-		VK_ASSERT(r);
-		return r;
+	if (_includeRenderPass) {
+		r = ::CreateRenderPass();
+		if (r) {
+			VK_ASSERT(r);
+			return r;
+		}
 	}
 
 	//Create the Framebuffer
@@ -638,6 +640,11 @@ VkResult VkSwapchain::Destroy() {
 
 	//Cleanup the Swapchain
 	Cleanup(true);
+	
+	//Destroy Swapchain
+	if (swapchain) {
+		vkDestroySwapchainKHR(VkGlobal::device, swapchain, nullptr);
+	}
 
 	//Destroy Command Objects
 	if (commandPool) {
@@ -699,11 +706,6 @@ VkResult VkSwapchain::Cleanup(const bool &_includeRenderPass) {
 
 		swapchainImageView.clear();
 		swapchainImageView.shrink_to_fit();
-	}
-
-	//Destroy Swapchain
-	if (swapchain) {
-		vkDestroySwapchainKHR(VkGlobal::device, swapchain, nullptr);
 	}
 
 	return VK_SUCCESS;

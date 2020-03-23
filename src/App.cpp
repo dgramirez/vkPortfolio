@@ -197,6 +197,10 @@ void GWindowEvent() {
 	gEvent.Read(winEvent, winEventData);
 
 	switch (winEvent) {
+	case GW::SYSTEM::GWindow::Events::MAXIMIZE:
+	case GW::SYSTEM::GWindow::Events::RESIZE:
+		CurrentScene->Reset();
+		break;
 	case GW::SYSTEM::GWindow::Events::DESTROY:
 		App::Cleanup();
 		break;

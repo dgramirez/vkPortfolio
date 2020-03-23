@@ -9,16 +9,22 @@ public:
 	~SceneMenu();
 
 	void Render(const float& _dtRatio) override;
-	void RenderImGui() override;
+	void Reset() override;
+	void Cleanup() override;
+
 	template<typename T>
 	void RegisterScene(const char* test_name) {
 		m_Scenes.push_back(std::make_pair(test_name, []() { return new T(); }));
 	}
+protected:
+	void RenderImGui() override;
 
 private:
 	Scene*& m_CurrentScene;
 	std::vector<std::pair<const char*, std::function<Scene * ()>>> m_Scenes;
 	bool yes;
+
+	void Init();
 };
 
 #endif

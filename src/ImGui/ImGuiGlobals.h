@@ -24,5 +24,7 @@ struct VkImGui {
 
 	//Static Functions
 	static VkResult Init();
+	static VkResult CleanupImage();
+	static VkResult ResetImage();
 	static VkResult Cleanup();
 };

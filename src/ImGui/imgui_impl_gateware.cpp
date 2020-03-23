@@ -71,58 +71,58 @@ bool	ImGui_ImplGateware_Init(void* gwindow)
 #endif
 
 	//Create Callback for GBufferedInput
-	g_GBufferedInput.Create(g_GWindow);
-	g_GBIReceiver.Create(g_GBufferedInput, [&]() {
-		//GEvent Setup [Getting Events]
-		GW::GEvent gEvent;
-		g_GBIReceiver.Pop(gEvent);
-
-		//Reading GWindow's Events & Data
-		GW::INPUT::GBufferedInput::Events Event;
-		GW::INPUT::GBufferedInput::EVENT_DATA EventData;
-		gEvent.Read(Event, EventData);
-
-		//Do Mouse
-		io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
-		bool isFocus;
-		g_GWindow.IsFocus(isFocus);
-		if (isFocus)
-			io.MousePos = ImVec2(EventData.x, EventData.y);
-
-		switch (Event) {
-		case GW::INPUT::GBufferedInput::Events::KEYPRESSED:
-			if (EventData.data < 256)
-				io.KeysDown[EventData.data] = 1;
-			io.KeyCtrl = io.KeysDown[G_KEY_CONTROL];
-			io.KeyShift = io.KeysDown[G_KEY_LEFTSHIFT] || io.KeysDown[G_KEY_RIGHTSHIFT];
-			io.KeyAlt = io.KeysDown[G_KEY_LEFTALT] || io.KeysDown[G_KEY_RIGHTALT];
-			AddCharacter(EventData.data);
-			break;
-		case GW::INPUT::GBufferedInput::Events::KEYRELEASED:
-			if (EventData.data < 256)
-				io.KeysDown[EventData.data] = 0;
-			io.KeyCtrl = io.KeysDown[G_KEY_CONTROL];
-			io.KeyShift = io.KeysDown[G_KEY_LEFTSHIFT] || io.KeysDown[G_KEY_RIGHTSHIFT];
-			io.KeyAlt = io.KeysDown[G_KEY_LEFTALT] || io.KeysDown[G_KEY_RIGHTALT];
-			break;
-		case GW::INPUT::GBufferedInput::Events::BUTTONPRESSED:
-			if (EventData.data == G_BUTTON_LEFT)   io.MouseDown[0] = true;
-			if (EventData.data == G_BUTTON_RIGHT)  io.MouseDown[1] = true;
-			if (EventData.data == G_BUTTON_MIDDLE) io.MouseDown[2] = true;
-			break;
-		case GW::INPUT::GBufferedInput::Events::BUTTONRELEASED:
-			if (EventData.data == G_BUTTON_LEFT)   io.MouseDown[0] = false;
-			if (EventData.data == G_BUTTON_RIGHT)  io.MouseDown[1] = false;
-			if (EventData.data == G_BUTTON_MIDDLE) io.MouseDown[2] = false;
-			break;
-		case GW::INPUT::GBufferedInput::Events::MOUSESCROLL:
-			if (EventData.data == G_MOUSE_SCROLL_UP)
-				io.MouseWheel += 1;
-			else
-				io.MouseWheel -= 1;
-			break;
-		}
-		});
+//	g_GBufferedInput.Create(g_GWindow);
+//	g_GBIReceiver.Create(g_GBufferedInput, [&]() {
+//		//GEvent Setup [Getting Events]
+//		GW::GEvent gEvent;
+//		g_GBIReceiver.Pop(gEvent);
+//
+//		//Reading GWindow's Events & Data
+//		GW::INPUT::GBufferedInput::Events Event;
+//		GW::INPUT::GBufferedInput::EVENT_DATA EventData;
+//		gEvent.Read(Event, EventData);
+//
+//		//Do Mouse
+//		io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+//		bool isFocus;
+//		g_GWindow.IsFocus(isFocus);
+//		if (isFocus)
+//			io.MousePos = ImVec2(EventData.x, EventData.y);
+//
+//		switch (Event) {
+//		case GW::INPUT::GBufferedInput::Events::KEYPRESSED:
+//			if (EventData.data < 256)
+//				io.KeysDown[EventData.data] = 1;
+//			io.KeyCtrl = io.KeysDown[G_KEY_CONTROL];
+//			io.KeyShift = io.KeysDown[G_KEY_LEFTSHIFT] || io.KeysDown[G_KEY_RIGHTSHIFT];
+//			io.KeyAlt = io.KeysDown[G_KEY_LEFTALT] || io.KeysDown[G_KEY_RIGHTALT];
+//			AddCharacter(EventData.data);
+//			break;
+//		case GW::INPUT::GBufferedInput::Events::KEYRELEASED:
+//			if (EventData.data < 256)
+//				io.KeysDown[EventData.data] = 0;
+//			io.KeyCtrl = io.KeysDown[G_KEY_CONTROL];
+//			io.KeyShift = io.KeysDown[G_KEY_LEFTSHIFT] || io.KeysDown[G_KEY_RIGHTSHIFT];
+//			io.KeyAlt = io.KeysDown[G_KEY_LEFTALT] || io.KeysDown[G_KEY_RIGHTALT];
+//			break;
+//		case GW::INPUT::GBufferedInput::Events::BUTTONPRESSED:
+//			if (EventData.data == G_BUTTON_LEFT)   io.MouseDown[0] = true;
+//			if (EventData.data == G_BUTTON_RIGHT)  io.MouseDown[1] = true;
+//			if (EventData.data == G_BUTTON_MIDDLE) io.MouseDown[2] = true;
+//			break;
+//		case GW::INPUT::GBufferedInput::Events::BUTTONRELEASED:
+//			if (EventData.data == G_BUTTON_LEFT)   io.MouseDown[0] = false;
+//			if (EventData.data == G_BUTTON_RIGHT)  io.MouseDown[1] = false;
+//			if (EventData.data == G_BUTTON_MIDDLE) io.MouseDown[2] = false;
+//			break;
+//		case GW::INPUT::GBufferedInput::Events::MOUSESCROLL:
+//			if (EventData.data == G_MOUSE_SCROLL_UP)
+//				io.MouseWheel += 1;
+//			else
+//				io.MouseWheel -= 1;
+//			break;
+//		}
+//		});
 
 	return true;
 }

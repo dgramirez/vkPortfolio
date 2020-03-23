@@ -92,7 +92,7 @@ struct VkSwapchain {
 	//Swapchain Functions
 	static VkResult UpdateSurfaceData();
 	static VkResult CreateCommandAndSyncBuffers();
-	static VkResult CreatePreset();
+	static VkResult CreatePreset(const bool& _includeRenderPass = true);
 	static VkResult Destroy();
 	static VkResult Cleanup(const bool &_includeRenderPass = false);
 };

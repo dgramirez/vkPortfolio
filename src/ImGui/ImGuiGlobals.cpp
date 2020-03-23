@@ -164,8 +164,8 @@ namespace {
 		frame_buffer_create_info.renderPass = VkImGui::renderPass;
 		frame_buffer_create_info.attachmentCount = 1;
 		frame_buffer_create_info.pAttachments = &VkImGui::imageView;
-		frame_buffer_create_info.width = VkGlobal::surfaceCapabilities.currentExtent.width;
-		frame_buffer_create_info.height = VkGlobal::surfaceCapabilities.currentExtent.height;
+		frame_buffer_create_info.width = VkSwapchain::surfaceCapabilities.currentExtent.width;
+		frame_buffer_create_info.height = VkSwapchain::surfaceCapabilities.currentExtent.height;
 		frame_buffer_create_info.layers = 1;
 
 		//Create the Surface (With Results) [VK_SUCCESS = 0]
@@ -569,6 +569,74 @@ VkResult VkImGui::Init()
 
 	return VK_SUCCESS;
 }
+VkResult VkImGui::CleanupImage()
+{
+	//Wait for Device to finish
+	vkDeviceWaitIdle(VkGlobal::device);
+
+	//Remove Framebuffer
+	if (VkImGui::frameBuffer) {
+		vkDestroyFramebuffer(VkGlobal::device, VkImGui::frameBuffer, VK_NULL_HANDLE);
+		VkImGui::frameBuffer = VK_NULL_HANDLE;
+	}
+
+	//Remove Image View
+	if (VkImGui::imageView) {
+		vkDestroyImageView(VkGlobal::device, VkImGui::imageView, VK_NULL_HANDLE);
+		VkImGui::imageView = VK_NULL_HANDLE;
+	}
+
+	//Remove Image
+	if (VkImGui::image) {
+		vkDestroyImage(VkGlobal::device, VkImGui::image, VK_NULL_HANDLE);
+		vkFreeMemory(VkGlobal::device, VkImGui::imageMemory, VK_NULL_HANDLE);
+		VkImGui::image = VK_NULL_HANDLE;
+		VkImGui::imageMemory = 0;
+	}
+
+	return VK_SUCCESS;
+}
+VkResult VkImGui::ResetImage()
+{
+	//Setup the Image
+	VkResult r  = ::SetupImage();
+	if (r) {
+		VK_ASSERT(r);
+		return r;
+	}
+
+	//Setup the Framebuffer
+	r = ::SetupFrameBuffer();
+	if (r) {
+		VK_ASSERT(r);
+		return r;
+	}
+
+	//Update the Descriptor
+	for (uint32_t i = 0; i < VkImGui::init_info.ImageCount; ++i)
+	{
+		VkDescriptorImageInfo dii = {};
+		dii.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		dii.imageView = VkImGui::imageView;
+		dii.sampler = VkImGui::sampler;
+
+		VkWriteDescriptorSet wds = {};
+		wds.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		wds.dstSet = VkImGui::descriptorSet[i];
+		wds.dstBinding = 0;
+		wds.dstArrayElement = 0;
+		wds.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		wds.descriptorCount = 1;
+		wds.pBufferInfo = nullptr;
+		wds.pImageInfo = &dii;
+		wds.pTexelBufferView = nullptr;
+		wds.pNext = nullptr;
+
+		vkUpdateDescriptorSets(VkGlobal::device, 1, &wds, 0, nullptr);
+	}
+
+	return VK_SUCCESS;
+}
 VkResult VkImGui::Cleanup() {
 	//Wait for Device to finish
 	vkDeviceWaitIdle(VkGlobal::device);
@@ -611,30 +679,13 @@ VkResult VkImGui::Cleanup() {
 		VkImGui::fence.shrink_to_fit();
 	}
 
-	//Remove Framebuffer
-	if (VkImGui::frameBuffer) {
-		vkDestroyFramebuffer(VkGlobal::device, VkImGui::frameBuffer, VK_NULL_HANDLE);
-		VkImGui::frameBuffer = VK_NULL_HANDLE;
-	}
+	//Remove Framebuffer and Image
+	VkImGui::CleanupImage();
 
 	//Remove Sampler
 	if (VkImGui::sampler) {
 		vkDestroySampler(VkGlobal::device, VkImGui::sampler, VK_NULL_HANDLE);
 		VkImGui::sampler = VK_NULL_HANDLE;
-	}
-
-	//Remove Image View
-	if (VkImGui::imageView) {
-		vkDestroyImageView(VkGlobal::device, VkImGui::imageView, VK_NULL_HANDLE);
-		VkImGui::imageView = VK_NULL_HANDLE;
-	}
-
-	//Remove Image
-	if (VkImGui::image) {
-		vkDestroyImage(VkGlobal::device, VkImGui::image, VK_NULL_HANDLE);
-		vkFreeMemory(VkGlobal::device, VkImGui::imageMemory, VK_NULL_HANDLE);
-		VkImGui::image = VK_NULL_HANDLE;
-		VkImGui::imageMemory = 0;
 	}
 
 	//Remove Command Objects

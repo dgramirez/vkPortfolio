@@ -5,38 +5,10 @@
 
 SceneMenu::SceneMenu(Scene*& _pScene)
 	: m_CurrentScene(_pScene) {
-	//0.) Cleanup Anything Prior
-	VkSwapchain::Cleanup();
-
-	//1.) Update the Surface Information
-	VkSwapchain::UpdateSurfaceData();
-
-	//2.) Setup Surface Information for Swapchain
-	VkSwapchain::surfaceCapabilities = VkGlobal::surfaceCapabilities;
-	VkSwapchain::surfacePresentMode = VK_PRESENT_MODE_FIFO_KHR;
-	VkSwapchain::surfaceExtent2D = VkSwapchain::surfaceCapabilities.currentExtent;
-	VkSwapchain::surfaceExtent3D = { VkSwapchain::surfaceExtent2D.width, VkSwapchain::surfaceExtent2D.height, 1 };
-	VkSwapchain::surfaceFormat.format = VK_FORMAT_B8G8R8A8_UNORM;
-	VkSwapchain::surfaceFormat.colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
-
-	//3.) Setup Other Swapchain Proeprties
-	VkSwapchain::presetFlags = 0;
-	VkSwapchain::frameMax = 2;
-	VkSwapchain::depthFormat = {};
-	VkSwapchain::clearValue.push_back({ 0.098f, 0.098f, 0.439f, 1.0f });
-
-	//4.) Create the Command Pool, Buffer and Semaphore, Fence [Do this once only!]
-	VkSwapchain::CreateCommandAndSyncBuffers();
-
-	//5.) Create a basic Swapchain
-	VkSwapchain::CreatePreset();
-
-	//6.) Initialize ImGui for Vulkan
-	VkImGui::Init();
+	Init();
 }
 SceneMenu::~SceneMenu() {
-	VkImGui::Cleanup();
-	VkSwapchain::Destroy();
+	Cleanup();
 }
 
 void SceneMenu::Render(const float& _dtRatio) {
@@ -63,6 +35,28 @@ void SceneMenu::Render(const float& _dtRatio) {
 	//Present
 	Present();
 }
+void SceneMenu::Reset() {
+	//Cleanup
+	VkImGui::CleanupImage();
+	VkSwapchain::Cleanup(false);
+
+	//Gather Info
+	VkSwapchain::UpdateSurfaceData();
+	VkSwapchain::surfaceCapabilities = VkGlobal::surfaceCapabilities;
+	VkSwapchain::surfacePresentMode = VK_PRESENT_MODE_FIFO_KHR;
+	VkSwapchain::surfaceExtent2D = VkSwapchain::surfaceCapabilities.currentExtent;
+	VkSwapchain::surfaceExtent3D = { VkSwapchain::surfaceExtent2D.width, VkSwapchain::surfaceExtent2D.height, 1 };
+	VkSwapchain::surfaceFormat.format = VK_FORMAT_B8G8R8A8_UNORM;
+	VkSwapchain::surfaceFormat.colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+
+	//Reset
+	VkSwapchain::CreatePreset(false);
+	VkImGui::ResetImage();
+}
+void SceneMenu::Cleanup() {
+	VkImGui::Cleanup();
+	VkSwapchain::Destroy();
+}
 void SceneMenu::RenderImGui() {
 	// Start the Dear ImGui frame
 	ImGui_ImplVulkan_NewFrame();
@@ -75,4 +69,35 @@ void SceneMenu::RenderImGui() {
 	//Set to Render
 	ImGui::Render();
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), VkImGui::commandBuffer[VkSwapchain::frameCurrent]);
+}
+
+void SceneMenu::Init() {
+	//0.) Cleanup Anything Prior
+	VkSwapchain::Cleanup();
+
+	//1.) Update the Surface Information
+	VkSwapchain::UpdateSurfaceData();
+
+	//2.) Setup Surface Information for Swapchain
+	VkSwapchain::surfaceCapabilities = VkGlobal::surfaceCapabilities;
+	VkSwapchain::surfacePresentMode = VK_PRESENT_MODE_FIFO_KHR;
+	VkSwapchain::surfaceExtent2D = VkSwapchain::surfaceCapabilities.currentExtent;
+	VkSwapchain::surfaceExtent3D = { VkSwapchain::surfaceExtent2D.width, VkSwapchain::surfaceExtent2D.height, 1 };
+	VkSwapchain::surfaceFormat.format = VK_FORMAT_B8G8R8A8_UNORM;
+	VkSwapchain::surfaceFormat.colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+
+	//3.) Setup Other Swapchain Proeprties
+	VkSwapchain::presetFlags = 0;
+	VkSwapchain::frameMax = 2;
+	VkSwapchain::depthFormat = {};
+	VkSwapchain::clearValue.push_back({ 0.098f, 0.098f, 0.439f, 1.0f });
+
+	//4.) Create the Command Pool, Buffer and Semaphore, Fence [Do this once only!]
+	VkSwapchain::CreateCommandAndSyncBuffers();
+
+	//5.) Create a basic Swapchain
+	VkSwapchain::CreatePreset(true);
+
+	//6.) Initialize ImGui for Vulkan
+	VkImGui::Init();
 }
