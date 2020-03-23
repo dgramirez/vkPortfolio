@@ -432,13 +432,13 @@ namespace {
 		//Color Blending Attachment & State
 		VkPipelineColorBlendAttachmentState color_blend_attachment_state = {};
 		color_blend_attachment_state.colorWriteMask = 0xF; //<-- RGBA Flags on... although blend is disabled
-		color_blend_attachment_state.blendEnable = VK_FALSE;
-		color_blend_attachment_state.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_COLOR;
-		color_blend_attachment_state.dstColorBlendFactor = VK_BLEND_FACTOR_DST_COLOR;
+		color_blend_attachment_state.blendEnable = VK_TRUE;
+		color_blend_attachment_state.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+		color_blend_attachment_state.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 		color_blend_attachment_state.colorBlendOp = VK_BLEND_OP_ADD;
-		color_blend_attachment_state.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-		color_blend_attachment_state.dstAlphaBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;
-		color_blend_attachment_state.alphaBlendOp = VK_BLEND_OP_ADD;
+		color_blend_attachment_state.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+		color_blend_attachment_state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+		color_blend_attachment_state.alphaBlendOp = VK_BLEND_OP_MAX;
 
 		VkPipelineColorBlendStateCreateInfo color_blend_create_info = {};
 		color_blend_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -451,13 +451,13 @@ namespace {
 		color_blend_create_info.blendConstants[2] = 0.0f;
 		color_blend_create_info.blendConstants[3] = 0.0f;
 
-		//Dynamic State [DISABLED.... But still showing for tutorial reasons that it exists]
+		//Dynamic State
 		VkPipelineDynamicStateCreateInfo dynamic_create_info = {};
 		dynamic_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 		dynamic_create_info.dynamicStateCount = 0;
 		dynamic_create_info.pDynamicStates = VK_NULL_HANDLE;
 
-		//Descriptor pipeline layout [NOTE: NEEDED FOR UNIFORM BUFFERS!, but for now not using.]
+		//Descriptor pipeline layout
 		VkPipelineLayoutCreateInfo pipeline_layout_create_info = {};
 		pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipeline_layout_create_info.setLayoutCount = 1;

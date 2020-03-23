@@ -345,7 +345,7 @@ void Scene::FrameStart(const VkCommandBuffer & _commandBuffer, const VkRenderPas
 	VkRenderPassBeginInfo render_pass_begin_info = {};
 	render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	render_pass_begin_info.renderPass = _renderPass;
-	render_pass_begin_info.framebuffer = _frameBuffer; //swapchainFramebuffer[frameCurrent]
+	render_pass_begin_info.framebuffer = _frameBuffer;
 	render_pass_begin_info.renderArea.extent = surfaceExtent2D;
 	render_pass_begin_info.clearValueCount = _clearColor.size();
 	render_pass_begin_info.pClearValues = _clearColor.data();
