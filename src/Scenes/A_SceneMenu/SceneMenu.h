@@ -22,7 +22,8 @@ protected:
 private:
 	Scene*& m_CurrentScene;
 	std::vector<std::pair<const char*, std::function<Scene * ()>>> m_Scenes;
-	bool yes;
+	uint32_t ImGuiWindowFlags;
+	bool OfCourse;
 
 	void Init();
 };

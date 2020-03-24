@@ -4,7 +4,7 @@
 #include "../../ImGui/ImGuiGlobals.h"
 
 SceneMenu::SceneMenu(Scene*& _pScene)
-	: m_CurrentScene(_pScene) {
+	: m_CurrentScene(_pScene), OfCourse(true) {
 	Init();
 }
 SceneMenu::~SceneMenu() {
@@ -63,8 +63,33 @@ void SceneMenu::RenderImGui() {
 	ImGui::NewFrame();
 
 	ImGui::Begin("Test Menu");
-	ImGui::ShowMetricsWindow(&yes);
+	if (ImGui::CollapsingHeader("Demo Windows"))
+	{
+		ImGui::CheckboxFlags("About Window", &ImGuiWindowFlags, 0x1);
+		ImGui::CheckboxFlags("Demo Window", &ImGuiWindowFlags, 0x2);
+		ImGui::CheckboxFlags("Metric Window", &ImGuiWindowFlags, 0x4);
+		ImGui::CheckboxFlags("User Guide", &ImGuiWindowFlags, 0x8);
+		ImGui::CheckboxFlags("Font Selector", &ImGuiWindowFlags, 0x10);
+		ImGui::CheckboxFlags("About Style Editor", &ImGuiWindowFlags, 0x20);
+		ImGui::CheckboxFlags("About Style Selector", &ImGuiWindowFlags, 0x40);
+
+		if (ImGuiWindowFlags & 0x1)
+			ImGui::ShowAboutWindow(&OfCourse);
+		if (ImGuiWindowFlags & 0x2)
+			ImGui::ShowDemoWindow(&OfCourse);
+		if (ImGuiWindowFlags & 0x4)
+			ImGui::ShowMetricsWindow(&OfCourse);
+		if (ImGuiWindowFlags & 0x8)
+			ImGui::ShowUserGuide();
+		if (ImGuiWindowFlags & 0x10)
+			ImGui::ShowFontSelector("Font Selector");
+		if (ImGuiWindowFlags & 0x20)
+			ImGui::ShowStyleEditor();
+		if (ImGuiWindowFlags & 0x40)
+			ImGui::ShowStyleSelector("Selector Style");
+	}
 	ImGui::End();
+
 
 	//Set to Render
 	ImGui::Render();
@@ -85,6 +110,7 @@ void SceneMenu::Init() {
 	VkSwapchain::surfaceExtent3D = { VkSwapchain::surfaceExtent2D.width, VkSwapchain::surfaceExtent2D.height, 1 };
 	VkSwapchain::surfaceFormat.format = VK_FORMAT_B8G8R8A8_UNORM;
 	VkSwapchain::surfaceFormat.colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+	ImGuiWindowFlags = 0;
 
 	//3.) Setup Other Swapchain Proeprties
 	VkSwapchain::presetFlags = 0;
