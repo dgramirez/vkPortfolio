@@ -88,41 +88,41 @@ bool	ImGui_ImplGateware_Init(void* gwindow)
 		bool isFocus;
 		g_GWindow.IsFocus(isFocus);
 		if (isFocus) {
-		switch (Event) {
-		case GW::INPUT::GBufferedInput::Events::KEYPRESSED:
-			if (EventData.data < 256)
-				io.KeysDown[EventData.data] = 1;
-			io.KeyCtrl = io.KeysDown[G_KEY_CONTROL];
-			io.KeyShift = io.KeysDown[G_KEY_LEFTSHIFT] || io.KeysDown[G_KEY_RIGHTSHIFT];
-			io.KeyAlt = io.KeysDown[G_KEY_LEFTALT] || io.KeysDown[G_KEY_RIGHTALT];
-			AddCharacter(EventData.data);
-			break;
-		case GW::INPUT::GBufferedInput::Events::KEYRELEASED:
-			if (EventData.data < 256)
-				io.KeysDown[EventData.data] = 0;
-			io.KeyCtrl = io.KeysDown[G_KEY_CONTROL];
-			io.KeyShift = io.KeysDown[G_KEY_LEFTSHIFT] || io.KeysDown[G_KEY_RIGHTSHIFT];
-			io.KeyAlt = io.KeysDown[G_KEY_LEFTALT] || io.KeysDown[G_KEY_RIGHTALT];
-			break;
-		case GW::INPUT::GBufferedInput::Events::BUTTONPRESSED:
-			if (EventData.data == G_BUTTON_LEFT)   io.MouseDown[0] = true;
-			if (EventData.data == G_BUTTON_RIGHT)  io.MouseDown[1] = true;
-			if (EventData.data == G_BUTTON_MIDDLE) io.MouseDown[2] = true;
-			break;
-		case GW::INPUT::GBufferedInput::Events::BUTTONRELEASED:
-			if (EventData.data == G_BUTTON_LEFT)   io.MouseDown[0] = false;
-			if (EventData.data == G_BUTTON_RIGHT)  io.MouseDown[1] = false;
-			if (EventData.data == G_BUTTON_MIDDLE) io.MouseDown[2] = false;
-			break;
-		case GW::INPUT::GBufferedInput::Events::MOUSESCROLL:
-			if (EventData.data == G_MOUSE_SCROLL_UP)
-				io.MouseWheel += 1;
-			else
-				io.MouseWheel -= 1;
-			break;
+			switch (Event) {
+			case GW::INPUT::GBufferedInput::Events::KEYPRESSED:
+				if (EventData.data < 256)
+					io.KeysDown[EventData.data] = 1;
+				io.KeyCtrl = io.KeysDown[G_KEY_CONTROL];
+				io.KeyShift = io.KeysDown[G_KEY_LEFTSHIFT] || io.KeysDown[G_KEY_RIGHTSHIFT];
+				io.KeyAlt = io.KeysDown[G_KEY_LEFTALT] || io.KeysDown[G_KEY_RIGHTALT];
+				AddCharacter(EventData.data);
+				break;
+			case GW::INPUT::GBufferedInput::Events::KEYRELEASED:
+				if (EventData.data < 256)
+					io.KeysDown[EventData.data] = 0;
+				io.KeyCtrl = io.KeysDown[G_KEY_CONTROL];
+				io.KeyShift = io.KeysDown[G_KEY_LEFTSHIFT] || io.KeysDown[G_KEY_RIGHTSHIFT];
+				io.KeyAlt = io.KeysDown[G_KEY_LEFTALT] || io.KeysDown[G_KEY_RIGHTALT];
+				break;
+			case GW::INPUT::GBufferedInput::Events::BUTTONPRESSED:
+				if (EventData.data == G_BUTTON_LEFT)   io.MouseDown[0] = true;
+				if (EventData.data == G_BUTTON_RIGHT)  io.MouseDown[1] = true;
+				if (EventData.data == G_BUTTON_MIDDLE) io.MouseDown[2] = true;
+				break;
+			case GW::INPUT::GBufferedInput::Events::BUTTONRELEASED:
+				if (EventData.data == G_BUTTON_LEFT)   io.MouseDown[0] = false;
+				if (EventData.data == G_BUTTON_RIGHT)  io.MouseDown[1] = false;
+				if (EventData.data == G_BUTTON_MIDDLE) io.MouseDown[2] = false;
+				break;
+			case GW::INPUT::GBufferedInput::Events::MOUSESCROLL:
+				if (EventData.data == G_MOUSE_SCROLL_UP)
+					io.MouseWheel += 1;
+				else
+					io.MouseWheel -= 1;
+				break;
+			}
 		}
-		}
-		});
+	});
 
 	return true;
 }
@@ -151,10 +151,9 @@ IMGUI_IMPL_API void ImGui_ImplGateware_NewFrame(const float& dt)
 	// Update OS Mouse Position
 	bool isFocus;
 	g_GWindow.IsFocus(isFocus);
-	if (isFocus) {
+	if (isFocus)
 		g_GInput.GetMousePosition(io.MousePos.x, io.MousePos.y);
-		printf("Mouse Pos: (%f, %f)\n", io.MousePos.x, io.MousePos.y);
-	}
+
 }
 
 void AddCharacter(const uint32_t& _data) {

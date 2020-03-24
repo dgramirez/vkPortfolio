@@ -24,10 +24,17 @@ namespace {
 		create_info.clipped = VK_TRUE;
 		create_info.oldSwapchain = VkSwapchain::swapchain;
 
+		std::vector<uint32_t> uniqueIndices;
+		uniqueIndices.push_back(VkGlobal::GRAPHICS_INDEX);
+		if (VkGlobal::GRAPHICS_INDEX ^ VkGlobal::PRESENT_INDEX)
+			uniqueIndices.push_back(VkGlobal::PRESENT_INDEX);
+		if (VkGlobal::PRESENT_INDEX ^ VkGlobal::COMPUTE_INDEX)
+			uniqueIndices.push_back(VkGlobal::COMPUTE_INDEX);
+
 		//Setup Correct Queue Family Indices
-		if (VkGlobal::uniqueIndices.size() > 1) {
-			create_info.queueFamilyIndexCount = VkGlobal::uniqueIndices.size();
-			create_info.pQueueFamilyIndices = VkGlobal::uniqueIndices.data();
+		if (uniqueIndices.size() > 1) {
+			create_info.queueFamilyIndexCount = uniqueIndices.size();
+			create_info.pQueueFamilyIndices = uniqueIndices.data();
 			create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
 		}
 		else {
