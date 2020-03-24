@@ -4,9 +4,18 @@ if (WIN32)
 	file(GLOB_RECURSE FILES_H *.h)
 	file(GLOB_RECURSE FILES_SRC *.cpp)
 	file(GLOB CONSOLECOLOR ../dep/consolecolors/*.c)
+	file(GLOB IMGUI ../dep/imgui/*.cpp)
 
 	#Create the project as exe/binary
-	add_executable(vkPortfolio ${FILES_SRC} ${FILES_H} ${CONSOLECOLOR})
+	add_executable(vkPortfolio ${FILES_SRC} ${FILES_H} ${CONSOLECOLOR} ${IMGUI})
+
+	#Set the include & lib directories
+	target_include_directories(vkPortfolio PUBLIC "../dep/consolecolors/")
+	target_include_directories(vkPortfolio PUBLIC "../dep/Gateware/")
+	target_include_directories(vkPortfolio PUBLIC "../dep/imgui/")
+	target_include_directories(vkPortfolio PUBLIC "../dep/sse_math/")
+	target_include_directories(vkPortfolio PUBLIC "../dep/stbimage/")
+	target_include_directories(vkPortfolio PUBLIC "../dep/vmaAllocator/")
 	target_include_directories(vkPortfolio PUBLIC $ENV{VULKAN_SDK}/Include/)
 	target_link_directories(vkPortfolio PUBLIC $ENV{VULKAN_SDK}/Lib/)
 	target_link_libraries(vkPortfolio PUBLIC "vulkan-1.lib")
@@ -30,9 +39,19 @@ if (UNIX AND NOT APPLE)
 	file(GLOB_RECURSE FILES_H *.h)
 	file(GLOB_RECURSE FILES_SRC *.cpp)
 	file(GLOB CONSOLECOLOR ../dep/consolecolors/*.c)
+	file(GLOB IMGUI ../dep/imgui/*.cpp)
 
 	#Create the project as exe/binary
-	add_executable(vkPortfolio ${FILES_SRC} ${FILES_H} ${CONSOLECOLOR})
+	add_executable(vkPortfolio ${FILES_SRC} ${FILES_H} ${CONSOLECOLOR} ${IMGUI})
+
+	#Set the include & lib directories
+	target_include_directories(vkPortfolio PUBLIC "../dep/consolecolors/")
+	target_include_directories(vkPortfolio PUBLIC "../dep/Gateware/")
+	target_include_directories(vkPortfolio PUBLIC "../dep/imgui/")
+	target_include_directories(vkPortfolio PUBLIC "../dep/sse_math/")
+	target_include_directories(vkPortfolio PUBLIC "../dep/stbimage/")
+	target_include_directories(vkPortfolio PUBLIC "../dep/vmaAllocator/")
+
 endif(UNIX AND NOT APPLE)
 
 if (APPLE)
