@@ -2,6 +2,13 @@
 #include "../Vulkan/VkGlobals.h"
 #include "../ImGui/ImGuiGlobals.h"
 
+bool Scene::ChangeRoom = false;
+
+void Scene::Cleanup() {
+	VkImGui::Cleanup();
+	VkSwapchain::Destroy();
+}
+
 void Scene::FrameStart(const VkCommandBuffer & _commandBuffer, const VkRenderPass& _renderPass, const VkExtent2D& _renderExtent, const VkFramebuffer& _frameBuffer, const std::vector<VkClearValue>& _clearColor) {
 	//Create the Command Buffer's Begin Info
 	VkCommandBufferBeginInfo command_buffer_begin_info = {};
