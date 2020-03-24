@@ -572,7 +572,8 @@ VkResult VkImGui::Init()
 VkResult VkImGui::CleanupImage()
 {
 	//Wait for Device to finish
-	vkDeviceWaitIdle(VkGlobal::device);
+	if (VkGlobal::device)
+		vkDeviceWaitIdle(VkGlobal::device);
 
 	//Remove Framebuffer
 	if (VkImGui::frameBuffer) {
@@ -639,7 +640,8 @@ VkResult VkImGui::ResetImage()
 }
 VkResult VkImGui::Cleanup() {
 	//Wait for Device to finish
-	vkDeviceWaitIdle(VkGlobal::device);
+	if (VkGlobal::device)
+		vkDeviceWaitIdle(VkGlobal::device);
 
 	//Destroy Pipelines
 	if (VkImGui::graphicsPipeline) {

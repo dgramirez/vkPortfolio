@@ -241,7 +241,7 @@ namespace {
 			return r;
 		}
 
-		r = VkGlobal::CreateImageView(VkSwapchain::msaaImage, VkSwapchain::surfaceFormat.format, VK_IMAGE_ASPECT_DEPTH_BIT, &VkSwapchain::msaaImageView);
+		r = VkGlobal::CreateImageView(VkSwapchain::msaaImage, VkSwapchain::surfaceFormat.format, VK_IMAGE_ASPECT_COLOR_BIT, &VkSwapchain::msaaImageView);
 		if (r) {
 			VK_ASSERT(r);
 			return r;
@@ -441,13 +441,13 @@ VkResult VkGlobal::TransitionImageLayout(const VkCommandPool& _commandPool, cons
 	submit_info.pCommandBuffers = &command_buffer;
 
 	//Submit The Commands Recorded into the Queue.
-	r = vkQueueSubmit(VkGlobal::queueTransfer, 1, &submit_info, VK_NULL_HANDLE);
+	r = vkQueueSubmit(VkGlobal::queueGraphics, 1, &submit_info, VK_NULL_HANDLE);
 	if (r) {
 		VK_ASSERT(r);
 		return r;
 	}
 
-	r = vkQueueWaitIdle(VkGlobal::queueTransfer);
+	r = vkQueueWaitIdle(VkGlobal::queueGraphics);
 	if (r) {
 		VK_ASSERT(r);
 		return r;
@@ -613,7 +613,8 @@ VkResult VkSwapchain::CreatePreset(const bool& _includeRenderPass)
 }
 VkResult VkSwapchain::Destroy() {
 	//Device Wait
-	vkDeviceWaitIdle(VkGlobal::device);
+	if (VkGlobal::device)
+		vkDeviceWaitIdle(VkGlobal::device);
 
 	//Destroy fence
 	if (fence.size()) {
@@ -651,6 +652,7 @@ VkResult VkSwapchain::Destroy() {
 	//Destroy Swapchain
 	if (swapchain) {
 		vkDestroySwapchainKHR(VkGlobal::device, swapchain, nullptr);
+		swapchain = nullptr;
 	}
 
 	//Destroy Command Objects
@@ -665,7 +667,8 @@ VkResult VkSwapchain::Destroy() {
 }
 VkResult VkSwapchain::Cleanup(const bool &_includeRenderPass) {
 	//Device Wait
-	vkDeviceWaitIdle(VkGlobal::device);
+	if (VkGlobal::device)
+		vkDeviceWaitIdle(VkGlobal::device);
 
 	//Destroy Framebuffer
 	if (frameBuffer.size()) {
