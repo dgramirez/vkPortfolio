@@ -1,17 +1,20 @@
+::Echo off
 @echo off
 
+::Back one Directory
 cd ../
-if not exist "build" mkdir build
-cd build
 
-if not exist "VisualStudio" mkdir VisualStudio
-cd VisualStudio
+::Check Existance, If so then delete it.
+if exist "build" rd build /S /Q
 
+::Create the build & VS Folder
+mkdir build
+mkdir "./build/VisualStudio"
+cd build/VisualStudio
+
+::Run CMake
 cmake -A x64 "../../"
-cmake -A x64 "../../"
 
-if errorlevel 1 (
-    echo No appropriate VS compiler found. Error Level: %errorlevel%
-)
+::Go back two directories and pause
 cd ../../
 pause
