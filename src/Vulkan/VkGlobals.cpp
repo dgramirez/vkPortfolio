@@ -74,6 +74,10 @@ namespace {
 		//Set Current Frame to 0
 		VkSwapchain::frameCurrent = 0;
 
+		//Quick Check: If Old Swapchain exists
+		if (create_info.oldSwapchain)
+			vkDestroySwapchainKHR(VkGlobal::device, create_info.oldSwapchain, VK_NULL_HANDLE);
+
 		//Return result (VK_SUCCESS)
 		return r;
 	}
@@ -646,15 +650,9 @@ VkResult VkSwapchain::Destroy() {
 		renderSemaphore.shrink_to_fit();
 	}
 
-	//Cleanup the Swapchain
+	//Cleanup the Swapchain Stuff
 	Cleanup(true);
 	
-	//Destroy Swapchain
-	if (swapchain) {
-		vkDestroySwapchainKHR(VkGlobal::device, swapchain, nullptr);
-		swapchain = nullptr;
-	}
-
 	//Destroy Command Objects
 	if (commandPool) {
 		vkDestroyCommandPool(VkGlobal::device, commandPool, nullptr);

@@ -152,6 +152,10 @@ namespace App {
 		//Cleanup The rest of the Vulkan Objects
 		VkImGui::Cleanup();
 		VkSwapchain::Destroy();
+		if (VkSwapchain::swapchain) {
+			vkDestroySwapchainKHR(VkGlobal::device, VkSwapchain::swapchain, VK_NULL_HANDLE);
+			VkSwapchain::swapchain = VK_NULL_HANDLE;
+		}
 		VkCore::vkCleanup();
 
 		//Set isClean to True
