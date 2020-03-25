@@ -4,6 +4,22 @@
 
 bool Scene::ChangeRoom = false;
 
+void Scene::Reset() {
+	//Cleanup
+	VkImGui::CleanupImage();
+	VkSwapchain::Cleanup(false);
+
+	//Gather Info
+	VkSwapchain::UpdateSurfaceData();
+	VkSwapchain::surfaceCapabilities = VkGlobal::surfaceCapabilities;
+	VkSwapchain::surfaceExtent2D = VkSwapchain::surfaceCapabilities.currentExtent;
+	VkSwapchain::surfaceExtent3D = { VkSwapchain::surfaceExtent2D.width, VkSwapchain::surfaceExtent2D.height, 1 };
+
+	//Reset
+	VkSwapchain::CreatePreset(false);
+	VkImGui::ResetImage();
+}
+
 void Scene::Cleanup() {
 	VkImGui::Cleanup();
 	VkSwapchain::Destroy();

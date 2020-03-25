@@ -67,24 +67,6 @@ void SceneMenu::Render(const float& _dtRatio) {
 	//Present
 	Present();
 }
-void SceneMenu::Reset() {
-	//Cleanup
-	VkImGui::CleanupImage();
-	VkSwapchain::Cleanup(false);
-
-	//Gather Info
-	VkSwapchain::UpdateSurfaceData();
-	VkSwapchain::surfaceCapabilities = VkGlobal::surfaceCapabilities;
-	VkSwapchain::surfacePresentMode = VK_PRESENT_MODE_FIFO_KHR;
-	VkSwapchain::surfaceExtent2D = VkSwapchain::surfaceCapabilities.currentExtent;
-	VkSwapchain::surfaceExtent3D = { VkSwapchain::surfaceExtent2D.width, VkSwapchain::surfaceExtent2D.height, 1 };
-	VkSwapchain::surfaceFormat.format = VK_FORMAT_B8G8R8A8_UNORM;
-	VkSwapchain::surfaceFormat.colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
-
-	//Reset
-	VkSwapchain::CreatePreset(false);
-	VkImGui::ResetImage();
-}
 void SceneMenu::RenderImGui() {
 	// Start the Dear ImGui frame
 	ImGui_ImplVulkan_NewFrame();

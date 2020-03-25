@@ -8,7 +8,7 @@ public:
 
 	virtual void Update(const float& _dt) {}
 	virtual void Render(const float& _dtRatio) {}
-	virtual void Reset() {}
+	virtual void Reset();
 	virtual void Cleanup();
 	virtual bool CheckRoomChange() { return false; }
 

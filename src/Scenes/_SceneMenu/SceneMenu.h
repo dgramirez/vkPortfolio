@@ -10,7 +10,6 @@ public:
 
 	void Init();
 	void Render(const float& _dtRatio) override;
-	void Reset() override;
 	bool CheckRoomChange() override;
 
 protected:
