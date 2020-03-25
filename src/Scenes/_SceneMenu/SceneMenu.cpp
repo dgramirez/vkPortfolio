@@ -4,7 +4,7 @@
 #include "../../ImGui/ImGuiGlobals.h"
 
 SceneMenu::SceneMenu(Scene*& _pScene)
-	: m_CurrentScene(_pScene), OfCourse(true) {
+	: m_CurrentScene(_pScene), OfCourse(true), tab_bar_flags(ImGuiTabBarFlags_None), index(-1), ExitApplication(false) {
 	RegisterScene();
 	Init();
 }
@@ -71,43 +71,87 @@ void SceneMenu::RenderImGui() {
 	// Start the Dear ImGui frame
 	ImGui_ImplVulkan_NewFrame();
 	ImGui::NewFrame();
-	ImGui::Begin("Test Menu");
+	ImGui::Begin("Main Menu");
 
-	//First Collapse: ImGui Tests
-	if (ImGui::CollapsingHeader("Demo Windows")) {
-		ImGui::CheckboxFlags("About Window", &ImGuiWindowFlags, 0x1);
-		ImGui::CheckboxFlags("Demo Window", &ImGuiWindowFlags, 0x2);
-		ImGui::CheckboxFlags("Metric Window", &ImGuiWindowFlags, 0x4);
-		ImGui::CheckboxFlags("User Guide", &ImGuiWindowFlags, 0x8);
-		ImGui::CheckboxFlags("Font Selector", &ImGuiWindowFlags, 0x10);
-		ImGui::CheckboxFlags("About Style Editor", &ImGuiWindowFlags, 0x20);
-		ImGui::CheckboxFlags("About Style Selector", &ImGuiWindowFlags, 0x40);
-
-		if (ImGuiWindowFlags & 0x1)
-			ImGui::ShowAboutWindow(&OfCourse);
-		if (ImGuiWindowFlags & 0x2)
-			ImGui::ShowDemoWindow(&OfCourse);
-		if (ImGuiWindowFlags & 0x4)
-			ImGui::ShowMetricsWindow(&OfCourse);
-		if (ImGuiWindowFlags & 0x8)
-			ImGui::ShowUserGuide();
-		if (ImGuiWindowFlags & 0x10)
-			ImGui::ShowFontSelector("Font Selector");
-		if (ImGuiWindowFlags & 0x20)
-			ImGui::ShowStyleEditor();
-		if (ImGuiWindowFlags & 0x40)
-			ImGui::ShowStyleSelector("Selector Style");
-	}
-	
-	//Second Collapse: Basic Tests
-	if (ImGui::CollapsingHeader("Basic Scenes"))
-		for (uint32_t i = 0; i < m_Scenes.size(); ++i)
-			if (ImGui::Button(m_Scenes[i].first)) {
-				index = i;
-				Scene::ChangeRoom = true;
-				break;
+	//Creating Tabs (Scenes, Options, ImGui and Credits)
+	if (ImGui::BeginTabBar("MyTabBar", tab_bar_flags))
+	{
+		if (ImGui::BeginTabItem("Scenes"))
+		{
+			if (ImGui::CollapsingHeader("Isolated Scenes: Simple")) {
+					for (uint32_t i = 0; i < m_Scenes.size(); ++i)
+						if (ImGui::Selectable(m_Scenes[i].first, false)) {
+							index = i;
+							Scene::ChangeRoom = true;
+							break;
+						}
 			}
+			if (ImGui::CollapsingHeader("Isolated Scenes: Advanced")) {
+				ImGui::Text("To be continued...");
+			}
+			if (ImGui::CollapsingHeader("Complex Scenes")) {
+				ImGui::Text("To be continued...");
+			}
+			ImGui::NewLine();
+			if (ImGui::Selectable("Exit Application", false)) {
+				ExitApplication = true;
+			}
+			ImGui::EndTabItem();
+		}
+		if (ImGui::BeginTabItem("Options"))
+		{
+			ImGui::Text("Note: This is only a setup for the mean time.");
+			ImGui::EndTabItem();
+		}
+		if (ImGui::BeginTabItem("ImGui"))
+		{
+			ImGui::CheckboxFlags("User Guide", &ImGuiWindowFlags, 0x1);
+			if (ImGuiWindowFlags & 0x1)
+				ImGui::ShowUserGuide();
+			ImGui::CheckboxFlags("About Window", &ImGuiWindowFlags, 0x2);
+			ImGui::CheckboxFlags("Demo Window", &ImGuiWindowFlags, 0x4);
+			ImGui::CheckboxFlags("Metric Window", &ImGuiWindowFlags, 0x8);
+			ImGui::CheckboxFlags("About Style Editor", &ImGuiWindowFlags, 0x10);
+			if (ImGuiWindowFlags & 0x10)
+				ImGui::ShowStyleEditor();
+			ImGui::EndTabItem();
+		}
+		if (ImGui::BeginTabItem("Credits"))
+		{
+			ImGui::Text("Credits for this system setup: ");
+			ImGui::BulletText("7thGate Software .LLC - Gateware");
+			ImGui::BulletText("Omar Cornut - Dear ImGui");
+			ImGui::BulletText("Advanced Micro Devices, Inc. - VMA Allocator"); 
+			ImGui::BulletText("Sean Barrett - stb image");
+			ImGui::BulletText("Vladimir V.Markelov - Console Colors [Debug]");
+			ImGui::Text("All the credits were obtain from the LICENSE files\nin each directory inside dep.");
+			ImGui::EndTabItem();
+		}
+		ImGui::EndTabBar();
 
+		//ImGui Tests
+		if (ImGuiWindowFlags & 0x2)
+			ImGui::ShowAboutWindow(&OfCourse);
+		if (ImGuiWindowFlags & 0x4)
+			ImGui::ShowDemoWindow(&OfCourse);
+		if (ImGuiWindowFlags & 0x8)
+			ImGui::ShowMetricsWindow(&OfCourse);
+
+		//Exit Application
+		if (ExitApplication) {
+			ImGui::Begin("Exit Application", &ExitApplication, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+			ImGui::SetWindowPos({ VkSwapchain::surfaceExtent2D.width / 2.0f - 170.0f, VkSwapchain::surfaceExtent2D.height / 2.0f - 44.0f });
+			ImGui::SetWindowSize({340, 88});
+			ImGui::Text("Are you sure you want to exit the application?");
+			ImGui::NewLine();
+			if (ImGui::Button("No", {75, 0}))
+				ExitApplication = false;
+			ImGui::SameLine(ImGui::GetWindowWidth() - 90);
+			if (ImGui::Button("Yes", {75, 0}))
+				Scene::ChangeRoom = true;
+			ImGui::End();
+		}
+	}
 
 	//Set to Render
 	ImGui::End();

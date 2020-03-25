@@ -21,6 +21,8 @@ private:
 	uint32_t ImGuiWindowFlags;
 	bool OfCourse;
 	int64_t index;
+	ImGuiTabBarFlags tab_bar_flags;
+	bool ExitApplication;
 
 	template<typename T>
 	void RegisterScene(const char* test_name) {

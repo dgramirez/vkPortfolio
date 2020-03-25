@@ -96,14 +96,21 @@ void TextureScene::RenderImGui() {
 	// Start the Dear ImGui frame
 	ImGui_ImplVulkan_NewFrame();
 	ImGui::NewFrame();
-
 	ImGui::Begin("Test Menu");
-	if (ImGui::Button("<-"))
+
+	if (ImGui::CollapsingHeader("Globals")) {
+
+	}
+
+	ImGui::NewLine();
+	bool backButton = ImGui::Button("<-");
+	ImGui::SameLine();
+	ImGui::Text("Back to Scene Menu");
+	if (backButton)
 		Scene::ChangeRoom = true;
 
-	ImGui::End();
-
 	//Set to Render
+	ImGui::End();
 	ImGui::Render();
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), VkImGui::commandBuffer[VkSwapchain::frameCurrent]);
 }
