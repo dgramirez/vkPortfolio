@@ -43,9 +43,11 @@ struct VkGlobal {
 	static uint32_t frameMax;
 
 	//Helper Methods
-	static VkResult CreateImage(const VkFormat& _format, const VkExtent3D& _imageExtent, const VkSampleCountFlagBits& _samples, const VkImageTiling& _tiling, const VkImageUsageFlags& _usageFlags, const VkMemoryPropertyFlags& _memoryPropertyFlags, VkImage* _outImage, VkDeviceMemory* _outImageMemory);
+	static VkResult CreateBuffer(const VkDeviceSize& _bufferSize, const VkBufferUsageFlags& _usageFlags, const VkMemoryPropertyFlags& _propertyFlags, VkBuffer* _outBuffer, VkDeviceMemory* _outBufferMemory);
+	static VkResult CreateImage(const VkFormat& _format, const VkExtent3D& _imageExtent, const uint32_t& _mipLevel, const VkSampleCountFlagBits& _samples, const VkImageTiling& _tiling, const VkImageUsageFlags& _usageFlags, const VkMemoryPropertyFlags& _memoryPropertyFlags, VkImage* _outImage, VkDeviceMemory* _outImageMemory);
 	static VkResult CreateImageView(const VkImage& _image, const VkFormat& _format, const VkImageAspectFlags& _imageAspectFlags, VkImageView* _outImageView);
-	static VkResult TransitionImageLayout(const VkCommandPool& _commandPool, const VkImage& _image, const VkFormat& _format, const VkImageLayout& _previousLayout, const VkImageLayout& _currentLayout);
+	static VkResult CopyBufferToImage(const VkCommandPool& _commandPool, const VkQueue& _queue, const VkBuffer& buffer, const VkImage& image, const VkExtent3D& extent);
+	static VkResult TransitionImageLayout(const VkCommandPool& _commandPool, const VkQueue& _queue, const uint32_t& _mipLevel, const VkImage& _image, const VkFormat& _format, const VkImageLayout& _previousLayout, const VkImageLayout& _currentLayout);
 };
 
 struct VkSwapchain {

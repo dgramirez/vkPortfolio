@@ -220,7 +220,7 @@ namespace {
 	}
 	VkResult CreateDepthBuffer() {
 		//Create the image and image view for Depth Buffer
-		VkResult r = VkGlobal::CreateImage(VkSwapchain::depthFormat, VkSwapchain::surfaceExtent3D, VkGlobal::msaa, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &VkSwapchain::depthImage, &VkSwapchain::depthMemory);
+		VkResult r = VkGlobal::CreateImage(VkSwapchain::depthFormat, VkSwapchain::surfaceExtent3D, 1, VkGlobal::msaa, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &VkSwapchain::depthImage, &VkSwapchain::depthMemory);
 		if (r) {
 			VK_ASSERT(r);
 			return r;
@@ -233,13 +233,13 @@ namespace {
 		}
 
 		//Transition the image layout from Undefined to Color Attachment (Optimal)
-		r = VkGlobal::TransitionImageLayout(VkSwapchain::commandPool, VkSwapchain::depthImage, VkSwapchain::depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+		r = VkGlobal::TransitionImageLayout(VkSwapchain::commandPool, VkGlobal::queueGraphics, 1, VkSwapchain::depthImage, VkSwapchain::depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 		VK_ASSERT(r);
 		return r;
 	}
 	VkResult CreateMSAABuffer() {
 		//Create the image and image view for MSAA
-		VkResult r = VkGlobal::CreateImage(VkSwapchain::surfaceFormat.format, VkSwapchain::surfaceExtent3D, VkGlobal::msaa, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &VkSwapchain::msaaImage, &VkSwapchain::msaaMemory);
+		VkResult r = VkGlobal::CreateImage(VkSwapchain::surfaceFormat.format, VkSwapchain::surfaceExtent3D, 1, VkGlobal::msaa, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &VkSwapchain::msaaImage, &VkSwapchain::msaaMemory);
 		if (r) {
 			VK_ASSERT(r);
 			return r;
@@ -252,20 +252,78 @@ namespace {
 		}
 
 		//Transition the image layout from Undefined to Color Attachment (Optimal)
-		r = VkGlobal::TransitionImageLayout(VkSwapchain::commandPool, VkSwapchain::msaaImage, VkSwapchain::surfaceFormat.format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+		r = VkGlobal::TransitionImageLayout(VkSwapchain::commandPool, VkGlobal::queueGraphics, 1, VkSwapchain::msaaImage, VkSwapchain::surfaceFormat.format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 		VK_ASSERT(r);
 		return r;
 	}
 }
 
+VkResult VkGlobal::CreateBuffer(const VkDeviceSize& _bufferSize, const VkBufferUsageFlags& _usageFlags, const VkMemoryPropertyFlags& _propertyFlags, VkBuffer* _outBuffer, VkDeviceMemory* _outBufferMemory)
+{
+	//Create Buffer Create Info
+	VkBufferCreateInfo buffer_create_info = {};
+	buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	buffer_create_info.size = _bufferSize;
+	buffer_create_info.usage = _usageFlags;
+	buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	VkResult r = vkCreateBuffer(VkGlobal::device, &buffer_create_info, nullptr, _outBuffer);
+	if (r) {
+		VK_ASSERT(r);
+		return r;
+	}
+
+	//Gather Memory Information from image & Physical Device
+	VkMemoryRequirements memory_requirements;
+	vkGetBufferMemoryRequirements(VkGlobal::device, *_outBuffer, &memory_requirements);
+	VkPhysicalDeviceMemoryProperties memory_properties;
+	vkGetPhysicalDeviceMemoryProperties(VkGlobal::physicalDevice, &memory_properties);
+
+	//Loop through the memory type count and see if there is a match with both the filter and property flags
+	int32_t memory_type_index = -1;
+	for (uint32_t i = 0; i < memory_properties.memoryTypeCount; ++i) {
+		if ((memory_requirements.memoryTypeBits & (1 << i)) &&
+			(memory_properties.memoryTypes[i].propertyFlags & _propertyFlags) == _propertyFlags) {
+			memory_type_index = i;
+			break;
+		}
+	}
+	if (memory_type_index == -1)
+		return VK_ERROR_NOT_PERMITTED_EXT;
+
+	//Memory Allocate Info
+	VkMemoryAllocateInfo memory_allocate_info = {};
+	memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	memory_allocate_info.allocationSize = memory_requirements.size;
+	memory_allocate_info.memoryTypeIndex = memory_type_index;
+
+	//Allocate the memory created
+	r = vkAllocateMemory(VkGlobal::device, &memory_allocate_info, VK_NULL_HANDLE, _outBufferMemory);
+	if (r) {
+		vkDestroyBuffer(VkGlobal::device, *_outBuffer, VK_NULL_HANDLE);
+		return r;
+	}
+
+	//Bind the memory created
+	r = vkBindBufferMemory(VkGlobal::device, *_outBuffer, *_outBufferMemory, 0);
+	if (r) {
+		vkDestroyBuffer(VkGlobal::device, *_outBuffer, VK_NULL_HANDLE);
+		vkFreeMemory(VkGlobal::device, *_outBufferMemory, VK_NULL_HANDLE);
+		return r;
+	}
+
+	//Image Creation has been successful!
+	return r;
+}
+
 //VkGlobal Functions
-VkResult VkGlobal::CreateImage(const VkFormat& _format, const VkExtent3D& _imageExtent, const VkSampleCountFlagBits& _samples, const VkImageTiling& _tiling, const VkImageUsageFlags& _usageFlags, const VkMemoryPropertyFlags& _memoryPropertyFlags, VkImage* _outImage, VkDeviceMemory* _outImageMemory) {
+VkResult VkGlobal::CreateImage(const VkFormat& _format, const VkExtent3D& _imageExtent, const uint32_t& _mipLevel, const VkSampleCountFlagBits& _samples, const VkImageTiling& _tiling, const VkImageUsageFlags& _usageFlags, const VkMemoryPropertyFlags& _memoryPropertyFlags, VkImage* _outImage, VkDeviceMemory* _outImageMemory) {
 	//Create image info
 	VkImageCreateInfo create_info = {};
 	create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 	create_info.imageType = VK_IMAGE_TYPE_2D;
 	create_info.extent = _imageExtent;
-	create_info.mipLevels = 1;
+	create_info.mipLevels = _mipLevel;
 	create_info.arrayLayers = 1;
 	create_info.format = _format;
 	create_info.tiling = _tiling;
@@ -340,7 +398,84 @@ VkResult VkGlobal::CreateImageView(const VkImage& _image, const VkFormat& _forma
 	//Image View has been created successfully, return it
 	return r;
 }
-VkResult VkGlobal::TransitionImageLayout(const VkCommandPool& _commandPool, const VkImage& _image, const VkFormat& _format, const VkImageLayout& _previousLayout, const VkImageLayout& _currentLayout) {
+VkResult VkGlobal::CopyBufferToImage(const VkCommandPool& _commandPool, const VkQueue& _queue, const VkBuffer& _buffer, const VkImage& _image, const VkExtent3D& _extent)
+{
+	//Setup the Command Buffer's Allocation Information
+	VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
+	command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	command_buffer_allocate_info.commandPool = _commandPool;
+	command_buffer_allocate_info.commandBufferCount = 1;
+
+	//Allocate the Command Buffer
+	VkCommandBuffer command_buffer = VK_NULL_HANDLE;
+	VkResult r = vkAllocateCommandBuffers(VkGlobal::device, &command_buffer_allocate_info, &command_buffer);
+	if (r) {
+		VK_ASSERT(r);
+		return r;
+	}
+
+	//Start the command buffer's begin info
+	VkCommandBufferBeginInfo command_buffer_begin_info = {};
+	command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	command_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+	//Begin the Command Buffer's recording process
+	r = vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info);
+	if (r) {
+		VK_ASSERT(r);
+		return r;
+	}
+
+	//Setup The Buffer Image Copy
+	VkBufferImageCopy buffer_image_copy = {};
+	buffer_image_copy.bufferOffset = 0;
+	buffer_image_copy.bufferRowLength = 0;
+	buffer_image_copy.bufferImageHeight = 0;
+	buffer_image_copy.imageSubresource.layerCount = 1;
+	buffer_image_copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	buffer_image_copy.imageSubresource.mipLevel = 0;
+	buffer_image_copy.imageSubresource.baseArrayLayer = 0;
+	buffer_image_copy.imageOffset = { 0,0,0 };
+	buffer_image_copy.imageExtent = _extent;
+
+	//Send Command to Copy Buffer to Image
+	vkCmdCopyBufferToImage(command_buffer, _buffer, _image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
+
+	//End the Command Buffer's recording Process
+	r = vkEndCommandBuffer(command_buffer);
+	if (r) {
+		VK_ASSERT(r);
+		return r;
+	}
+
+	//Create the submit info
+	VkSubmitInfo submit_info = {};
+	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submit_info.commandBufferCount = 1;
+	submit_info.pCommandBuffers = &command_buffer;
+
+	//Submit The Commands Recorded into the Queue.
+	r = vkQueueSubmit(_queue, 1, &submit_info, VK_NULL_HANDLE);
+	if (r) {
+		VK_ASSERT(r);
+		return r;
+	}
+
+	//Wait for that specific Queue
+	r = vkQueueWaitIdle(_queue);
+	if (r) {
+		VK_ASSERT(r);
+		return r;
+	}
+
+	//Free the command buffer from memory
+	vkFreeCommandBuffers(VkGlobal::device, _commandPool, 1, &command_buffer);
+
+	//The Command Buffer has ended successfully!
+	return VK_SUCCESS;
+}
+VkResult VkGlobal::TransitionImageLayout(const VkCommandPool& _commandPool, const VkQueue& _queue, const uint32_t& _mipLevel, const VkImage& _image, const VkFormat& _format, const VkImageLayout& _previousLayout, const VkImageLayout& _currentLayout) {
 	//Setup the Command Buffer's Allocation Information
 	VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
 	command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -378,9 +513,9 @@ VkResult VkGlobal::TransitionImageLayout(const VkCommandPool& _commandPool, cons
 	image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	image_memory_barrier.subresourceRange.baseMipLevel = 0;
-	image_memory_barrier.subresourceRange.levelCount = 1;
-	image_memory_barrier.subresourceRange.layerCount = 1;
+	image_memory_barrier.subresourceRange.levelCount = _mipLevel;
 	image_memory_barrier.subresourceRange.baseArrayLayer = 0;
+	image_memory_barrier.subresourceRange.layerCount = 1;
 
 	//Setup the source and destination stage flags. Will be set based on the Old and New Layout set from outside
 	VkPipelineStageFlags source_stage = VK_NULL_HANDLE;
@@ -445,13 +580,14 @@ VkResult VkGlobal::TransitionImageLayout(const VkCommandPool& _commandPool, cons
 	submit_info.pCommandBuffers = &command_buffer;
 
 	//Submit The Commands Recorded into the Queue.
-	r = vkQueueSubmit(VkGlobal::queueGraphics, 1, &submit_info, VK_NULL_HANDLE);
+	r = vkQueueSubmit(_queue, 1, &submit_info, VK_NULL_HANDLE);
 	if (r) {
 		VK_ASSERT(r);
 		return r;
 	}
 
-	r = vkQueueWaitIdle(VkGlobal::queueGraphics);
+	//Wait for that specific Queue
+	r = vkQueueWaitIdle(_queue);
 	if (r) {
 		VK_ASSERT(r);
 		return r;
@@ -484,6 +620,7 @@ VkResult VkSwapchain::UpdateSurfaceData() {
 		VK_ASSERT(r);
 		return r;
 	}
+
 	//Resize Surface Formats Vector and Put the contents in it.
 	VkGlobal::surfaceFormatsAll.resize(formatCount);
 	r = vkGetPhysicalDeviceSurfaceFormatsKHR(VkGlobal::physicalDevice, VkGlobal::surface, &formatCount, VkGlobal::surfaceFormatsAll.data());
@@ -503,6 +640,7 @@ VkResult VkSwapchain::UpdateSurfaceData() {
 		VK_ASSERT(r);
 		return r;
 	}
+
 	//Resize Present Modes Vector and Put the contents in it.
 	VkGlobal::surfacePresentModesAll.resize(presentModeCount);
 	r = vkGetPhysicalDeviceSurfacePresentModesKHR(VkGlobal::physicalDevice, VkGlobal::surface, &presentModeCount, VkGlobal::surfacePresentModesAll.data());

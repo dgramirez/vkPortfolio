@@ -150,7 +150,7 @@ namespace {
 		return err;
 	}
 	VkResult SetupImage() {
-		VkResult r = VkGlobal::CreateImage(VK_FORMAT_B8G8R8A8_UNORM, VkSwapchain::surfaceExtent3D, VkGlobal::msaa, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &VkImGui::image, &VkImGui::imageMemory);
+		VkResult r = VkGlobal::CreateImage(VK_FORMAT_B8G8R8A8_UNORM, VkSwapchain::surfaceExtent3D, 1, VkGlobal::msaa, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &VkImGui::image, &VkImGui::imageMemory);
 		r = VkGlobal::CreateImageView(VkImGui::image, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, &VkImGui::imageView);
 		return VK_SUCCESS;
 	}
@@ -518,8 +518,7 @@ namespace {
 	}
 }
 
-VkResult VkImGui::Init()
-{
+VkResult VkImGui::Init() {
 	//Setup the initinfo
 	init_info = {};
 	init_info.Instance = VkGlobal::instance;
