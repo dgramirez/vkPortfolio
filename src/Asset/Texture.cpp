@@ -197,7 +197,7 @@ VkResult Texture::LoadTexture(const char* _filePath) {
 	vkUnmapMemory(VkGlobal::device, stagingBufferMemory);
 
 	//Create the Image
-	r = VkGlobal::CreateImage(VK_FORMAT_B8G8R8A8_UNORM, dimensions, maxMip, VkGlobal::msaa, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &image, &imageMemory);
+	r = VkGlobal::CreateImage(VK_FORMAT_R8G8B8A8_UNORM, dimensions, maxMip, VkGlobal::msaa, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &image, &imageMemory);
 	if (r) {
 		VK_ASSERT(r);
 		return r;
@@ -230,7 +230,7 @@ VkResult Texture::LoadTexture(const char* _filePath) {
 	}
 
 	//Create the Image View
-	r = VkGlobal::CreateImageView(image, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, &imageView);
+	r = VkGlobal::CreateImageView(image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, &imageView);
 	if (r) {
 		VK_ASSERT(r);
 		return r;
