@@ -16,8 +16,19 @@ protected:
 	void RenderImGui() override;
 
 private:
-	VkImage tex;
-	VkImageView texView;
-	void LoadTexture(const char* _filePath);
-	Texture Crate;
+	//Texture
+	Texture Smiley;
+
+	//Pipeline to draw the texture
+	VkDescriptorPool descriptorPool;
+	VkSampler sampler;
+	VkDescriptorSetLayout descriptorSetLayout;
+	std::vector<VkDescriptorSet> descriptorSet;
+	VkPipelineLayout pipelineLayout;
+	VkPipeline graphicsPipeline;
+
+	//Helper Methods
+	VkResult SetupDescriptors();
+	VkResult SetupGraphicsPipeline();
+
 };

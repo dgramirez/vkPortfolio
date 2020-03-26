@@ -2,8 +2,6 @@
 #include "../../Vulkan/VkGlobals.h"
 #include "../../ImGui/ImGuiGlobals.h"
 
-
-
 TextureScene::TextureScene() {
 	//1.) Update the Surface Information
 	VkSwapchain::UpdateSurfaceData();
@@ -28,11 +26,26 @@ TextureScene::TextureScene() {
 	VkImGui::Init();
 
 	//5.) Setup Diffuse
-	Crate.LoadTexture("../../../assets/Crate/crate2_diffuse.png");
+	Smiley.LoadTexture("../../../assets/SmileyFace/smileyface.png");
+
+	//6.) Setup Descriptor Sets & Pipeline Layout
+	SetupDescriptors();
+
+	//7.) Setup Graphics Pipeline
+	SetupGraphicsPipeline();
 }
 TextureScene::~TextureScene() {
-	//Destroy Crate Texture
-	Crate.Free();
+	//Destroy Graphics Pipeline
+	vkDestroyPipeline(VkGlobal::device, graphicsPipeline, VK_NULL_HANDLE);
+	
+	//Destroy Descriptors
+	vkDestroyPipelineLayout(VkGlobal::device, pipelineLayout, VK_NULL_HANDLE);
+	vkDestroySampler(VkGlobal::device, sampler, VK_NULL_HANDLE);
+	vkDestroyDescriptorSetLayout(VkGlobal::device, descriptorSetLayout, VK_NULL_HANDLE);
+	vkDestroyDescriptorPool(VkGlobal::device, descriptorPool, VK_NULL_HANDLE);
+
+	//Destroy Smiley Texture
+	Smiley.Free();
 }
 
 void TextureScene::Update(const float& _dt) {
@@ -47,16 +60,24 @@ void TextureScene::Render(const float& _dtRatio) {
 
 	//Render to Texture ImGui
 	FrameStart(VkImGui::commandBuffer[VkSwapchain::frameCurrent], VkImGui::renderPass, VkSwapchain::surfaceExtent2D, VkImGui::frameBuffer, VkImGui::clearColor);
-	RenderImGui();
+		RenderImGui();
 	FrameEnd(VkImGui::commandBuffer[VkSwapchain::frameCurrent], VkSwapchain::presentSemaphore[VkSwapchain::frameCurrent], VkImGui::semaphore[VkSwapchain::frameCurrent], VkImGui::fence[VkSwapchain::frameCurrent]);
 
 	//Render to Swapchain
 	FrameStart(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], VkSwapchain::renderPass, VkSwapchain::surfaceExtent2D, VkSwapchain::frameBuffer[VkSwapchain::frameCurrent], VkSwapchain::clearValue);
-	vkCmdSetViewport(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], 0, 1, &VkSwapchain::viewport);
-	vkCmdSetScissor(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], 0, 1, &VkSwapchain::scissor);
-	vkCmdBindDescriptorSets(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, VkImGui::pipelineLayout, 0, 1, &VkImGui::descriptorSet[VkSwapchain::frameCurrent], 0, nullptr);
-	vkCmdBindPipeline(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, VkImGui::graphicsPipeline);
-	vkCmdDraw(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], 3, 1, 0, 0);
+		//Set Dynamic Viewport and Scissor
+		vkCmdSetViewport(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], 0, 1, &VkSwapchain::viewport);
+		vkCmdSetScissor(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], 0, 1, &VkSwapchain::scissor);
+	
+		//Draw Texture
+		vkCmdBindDescriptorSets(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet[VkSwapchain::frameCurrent], 0, nullptr);
+		vkCmdBindPipeline(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+		vkCmdDraw(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], 6, 1, 0, 0);
+
+		//Draw ImGui
+		vkCmdBindDescriptorSets(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, VkImGui::pipelineLayout, 0, 1, &VkImGui::descriptorSet[VkSwapchain::frameCurrent], 0, nullptr);
+		vkCmdBindPipeline(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, VkImGui::graphicsPipeline);
+		vkCmdDraw(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], 3, 1, 0, 0);
 	FrameEnd(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], VkImGui::semaphore[VkSwapchain::frameCurrent], VkSwapchain::renderSemaphore[VkSwapchain::frameCurrent], VkSwapchain::fence[VkSwapchain::frameCurrent]);
 
 	//Present
@@ -79,6 +100,331 @@ void TextureScene::RenderImGui() {
 	ImGui::End();
 	ImGui::Render();
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), VkImGui::commandBuffer[VkSwapchain::frameCurrent]);
+}
+VkResult  TextureScene::SetupDescriptors() {
+	//Descriptor Pool
+	VkDescriptorPoolSize dps = {};
+	dps.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	dps.descriptorCount = VkSwapchain::frameMax;
+
+	VkDescriptorPoolCreateInfo dp_create_info = {};
+	dp_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	dp_create_info.poolSizeCount = 1;
+	dp_create_info.pPoolSizes = &dps;
+	dp_create_info.maxSets = VkSwapchain::frameMax;
+	VkResult r = vkCreateDescriptorPool(VkGlobal::device, &dp_create_info, nullptr, &descriptorPool);
+	if (r) {
+		VK_ASSERT(r);
+		return r;
+	}
+
+	//Descriptor Set Layout
+	VkDescriptorSetLayoutBinding ps_img = {};
+	ps_img.binding = 0;
+	ps_img.descriptorCount = 1;
+	ps_img.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	ps_img.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	VkDescriptorSetLayoutCreateInfo dsl_create_info = {};
+	dsl_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	dsl_create_info.bindingCount = 1;
+	dsl_create_info.pBindings = &ps_img;
+	r = vkCreateDescriptorSetLayout(VkGlobal::device, &dsl_create_info, nullptr, &descriptorSetLayout);
+	if (r) {
+		VK_ASSERT(r);
+		return r;
+	}
+
+	//Descriptor Sets
+	descriptorSet.resize(VkSwapchain::frameMax);
+	std::vector<VkDescriptorSetLayout> dsl_list(VkSwapchain::frameMax, descriptorSetLayout);
+	VkDescriptorSetAllocateInfo ds_allocate_info = {};
+	ds_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	ds_allocate_info.descriptorSetCount = VkSwapchain::frameMax;
+	ds_allocate_info.descriptorPool = descriptorPool;
+	ds_allocate_info.pSetLayouts = &dsl_list[0];
+	r = vkAllocateDescriptorSets(VkGlobal::device, &ds_allocate_info, descriptorSet.data());
+	if (r) {
+		VK_ASSERT(r);
+		return r;
+	}
+
+	//Create Sampler
+	VkSamplerCreateInfo sampler_create_info = {};
+	sampler_create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+	sampler_create_info.magFilter = VK_FILTER_LINEAR;
+	sampler_create_info.minFilter = VK_FILTER_LINEAR;
+	sampler_create_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	sampler_create_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	sampler_create_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	sampler_create_info.anisotropyEnable = VK_TRUE;
+	sampler_create_info.maxAnisotropy = static_cast<float>(VkGlobal::msaa);
+	sampler_create_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+	sampler_create_info.unnormalizedCoordinates = VK_FALSE;
+	sampler_create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	sampler_create_info.mipLodBias = 0.0f;
+	sampler_create_info.minLod = 0.0f;
+	sampler_create_info.maxLod = 1.0f;
+
+	r = vkCreateSampler(VkGlobal::device, &sampler_create_info, nullptr, &sampler);
+	if (r) {
+		VK_ASSERT(r);
+		return r;
+	}
+
+	for (uint32_t i = 0; i < VkSwapchain::frameMax; ++i)
+	{
+		VkDescriptorImageInfo dii = {};
+		dii.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		dii.imageView = Smiley.imageView;
+		dii.sampler = sampler;
+
+		VkWriteDescriptorSet wds = {};
+		wds.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		wds.dstSet = descriptorSet[i];
+		wds.dstBinding = 0;
+		wds.dstArrayElement = 0;
+		wds.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		wds.descriptorCount = 1;
+		wds.pBufferInfo = nullptr;
+		wds.pImageInfo = &dii;
+		wds.pTexelBufferView = nullptr;
+		wds.pNext = nullptr;
+
+		vkUpdateDescriptorSets(VkGlobal::device, 1, &wds, 0, nullptr);
+	}
+
+	//Create Pipeline Layout
+	VkPipelineLayoutCreateInfo pipeline_layout_create_info = {};
+	pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	pipeline_layout_create_info.setLayoutCount = 1;
+	pipeline_layout_create_info.pSetLayouts = &descriptorSetLayout;
+	pipeline_layout_create_info.pushConstantRangeCount = 0;
+	pipeline_layout_create_info.pPushConstantRanges = nullptr;
+	r = vkCreatePipelineLayout(VkGlobal::device, &pipeline_layout_create_info, nullptr, &pipelineLayout);
+	VK_ASSERT(r);
+	return r;
+}
+VkResult TextureScene::SetupGraphicsPipeline()
+{
+	//Const Variables
+	const uint32_t VERTEX = 0;
+	const uint32_t FRAGMENT = 1;
+
+	//Setup Shader Info
+	VkShaderModule shader[2] = {};
+	VkPipelineShaderStageCreateInfo stage_create_info[2] = {};
+
+	//Create the GFile
+	const char* vsFilename = "../../../src/Scenes/A_Texture/shader.vert.spv";
+	const char* psFilename = "../../../src/Scenes/A_Texture/shader.frag.spv";
+
+	GW::SYSTEM::GFile ShaderFile; ShaderFile.Create();
+
+	//Get the size of the Vertex Shader
+	uint32_t vsFileSize;
+	ShaderFile.GetFileSize(vsFilename, vsFileSize);
+
+	//Open the Vertex Shader
+	if (-ShaderFile.OpenBinaryRead(vsFilename)) {
+		VK_ASSERT(VK_ERROR_FEATURE_NOT_PRESENT);
+		return VK_ERROR_FEATURE_NOT_PRESENT;
+	}
+
+	//Copy the Contents of the Vertex Shader
+	char* tempShaderFile = new char[vsFileSize];
+	ShaderFile.Read(tempShaderFile, vsFileSize);
+
+	//Create Shader Module for Vertex Shader
+	VkShaderModuleCreateInfo vsModuleCreateInfo = {};
+	vsModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	vsModuleCreateInfo.codeSize = vsFileSize;
+	vsModuleCreateInfo.pCode = reinterpret_cast<const uint32_t*>(tempShaderFile);
+	VkResult r = vkCreateShaderModule(VkGlobal::device, &vsModuleCreateInfo, VK_NULL_HANDLE, &shader[VERTEX]);
+	if (r) {
+		VK_ASSERT(r);
+		return r;
+	}
+
+	//Create Stage Info for Vertex Shader
+	stage_create_info[VERTEX].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	stage_create_info[VERTEX].stage = VK_SHADER_STAGE_VERTEX_BIT;
+	stage_create_info[VERTEX].module = shader[VERTEX];
+	stage_create_info[VERTEX].pName = "main";
+
+	//Cleanup
+	delete[] tempShaderFile;
+	ShaderFile.CloseFile();
+
+	//Get the size of the Fragment Shader
+	uint32_t psFileSize;
+	ShaderFile.GetFileSize(psFilename, psFileSize);
+
+	//Open the Fragment Shader
+	if (-ShaderFile.OpenBinaryRead(psFilename)) {
+		VK_ASSERT(VK_ERROR_FEATURE_NOT_PRESENT);
+		return VK_ERROR_FEATURE_NOT_PRESENT;
+	}
+
+	//Copy the Contents of the Fragment Shader
+	tempShaderFile = new char[psFileSize];
+	ShaderFile.Read(tempShaderFile, psFileSize);
+
+	//Create Shader Module for Fragment Shader
+	VkShaderModuleCreateInfo psModuleCreateInfo = {};
+	psModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	psModuleCreateInfo.codeSize = psFileSize;
+	psModuleCreateInfo.pCode = reinterpret_cast<const uint32_t*>(tempShaderFile);
+	r = vkCreateShaderModule(VkGlobal::device, &psModuleCreateInfo, VK_NULL_HANDLE, &shader[FRAGMENT]);
+	if (r) {
+		VK_ASSERT(r);
+		return r;
+	}
+
+	//Create Stage Info for Fragment Shader
+	stage_create_info[FRAGMENT].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	stage_create_info[FRAGMENT].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	stage_create_info[FRAGMENT].module = shader[FRAGMENT];
+	stage_create_info[FRAGMENT].pName = "main";
+
+	//Cleanup
+	delete[] tempShaderFile;
+	ShaderFile.CloseFile();
+
+	//Assembly State
+	VkPipelineInputAssemblyStateCreateInfo assembly_create_info = {};
+	assembly_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	assembly_create_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	assembly_create_info.primitiveRestartEnable = false;
+
+	VkPipelineVertexInputStateCreateInfo input_vertex_info = {};
+	input_vertex_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+	input_vertex_info.vertexBindingDescriptionCount = 0;
+	input_vertex_info.pVertexBindingDescriptions = VK_NULL_HANDLE;
+	input_vertex_info.vertexAttributeDescriptionCount = 0;
+	input_vertex_info.pVertexAttributeDescriptions = VK_NULL_HANDLE;
+
+	//Viewport State
+	VkViewport viewport = {};
+	viewport.x = 0.0f;
+	viewport.y = 0.0f;
+	viewport.width = VkGlobal::surfaceCapabilities.currentExtent.width;
+	viewport.height = VkGlobal::surfaceCapabilities.currentExtent.height;
+	viewport.minDepth = 0.0f;
+	viewport.maxDepth = 1.0f;
+
+	VkRect2D scissor = {};
+	scissor.offset = { 0,0 };
+	scissor.extent = VkGlobal::surfaceCapabilities.currentExtent;
+
+	VkPipelineViewportStateCreateInfo viewport_create_info = {};
+	viewport_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+	viewport_create_info.viewportCount = 1;
+	viewport_create_info.pViewports = &viewport;
+	viewport_create_info.scissorCount = 1;
+	viewport_create_info.pScissors = &scissor;
+
+	//Rasterizer State
+	VkPipelineRasterizationStateCreateInfo rasterization_create_info = {};
+	rasterization_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	rasterization_create_info.rasterizerDiscardEnable = VK_FALSE;
+	rasterization_create_info.polygonMode = VK_POLYGON_MODE_FILL;
+	rasterization_create_info.lineWidth = 1.0f;
+	rasterization_create_info.cullMode = VK_CULL_MODE_BACK_BIT;
+	rasterization_create_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	rasterization_create_info.depthClampEnable = VK_FALSE;
+	rasterization_create_info.depthBiasEnable = VK_FALSE;
+	rasterization_create_info.depthBiasClamp = 0.0f;
+	rasterization_create_info.depthBiasConstantFactor = 0.0f;
+	rasterization_create_info.depthBiasSlopeFactor = 0.0f;
+
+	//Multisampling State
+	VkPipelineMultisampleStateCreateInfo multisample_create_info = {};
+	multisample_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+	multisample_create_info.sampleShadingEnable = VK_FALSE;
+	multisample_create_info.rasterizationSamples = VkGlobal::msaa;
+	multisample_create_info.minSampleShading = 1.0f;
+	multisample_create_info.pSampleMask = VK_NULL_HANDLE;
+	multisample_create_info.alphaToCoverageEnable = VK_FALSE;
+	multisample_create_info.alphaToOneEnable = VK_FALSE;
+
+	//Depth-Stencil State
+	VkPipelineDepthStencilStateCreateInfo depth_stencil_create_info = {};
+	depth_stencil_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+	depth_stencil_create_info.depthTestEnable = VK_FALSE;
+	depth_stencil_create_info.depthWriteEnable = VK_FALSE;
+	depth_stencil_create_info.depthCompareOp = VK_COMPARE_OP_LESS;
+	depth_stencil_create_info.depthBoundsTestEnable = VK_FALSE;
+	depth_stencil_create_info.minDepthBounds = 0.0f;
+	depth_stencil_create_info.maxDepthBounds = 1.0f;
+	depth_stencil_create_info.stencilTestEnable = VK_FALSE;
+
+	//Color Blending Attachment & State
+	VkPipelineColorBlendAttachmentState color_blend_attachment_state = {};
+	color_blend_attachment_state.colorWriteMask = 0xF; //<-- RGBA Flags on... although blend is disabled
+	color_blend_attachment_state.blendEnable = VK_TRUE;
+	color_blend_attachment_state.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+	color_blend_attachment_state.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	color_blend_attachment_state.colorBlendOp = VK_BLEND_OP_ADD;
+	color_blend_attachment_state.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+	color_blend_attachment_state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+	color_blend_attachment_state.alphaBlendOp = VK_BLEND_OP_MAX;
+
+	VkPipelineColorBlendStateCreateInfo color_blend_create_info = {};
+	color_blend_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	color_blend_create_info.logicOpEnable = VK_FALSE;
+	color_blend_create_info.logicOp = VK_LOGIC_OP_COPY;
+	color_blend_create_info.attachmentCount = 1;
+	color_blend_create_info.pAttachments = &color_blend_attachment_state;
+	color_blend_create_info.blendConstants[0] = 0.0f;
+	color_blend_create_info.blendConstants[1] = 0.0f;
+	color_blend_create_info.blendConstants[2] = 0.0f;
+	color_blend_create_info.blendConstants[3] = 0.0f;
+
+	//Dynamic State
+	VkDynamicState dynamicState[2] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+	VkPipelineDynamicStateCreateInfo dynamic_create_info = {};
+	dynamic_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+	dynamic_create_info.dynamicStateCount = 2;
+	dynamic_create_info.pDynamicStates = dynamicState;
+
+	//////////////////////////////////////////////////
+	//												//
+	//		FINALLY: GRAPHICS PIPELINE CREATION!	//
+	//												//
+	//////////////////////////////////////////////////
+
+	VkGraphicsPipelineCreateInfo pipeline_create_info = {};
+	pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	pipeline_create_info.stageCount = 2;
+	pipeline_create_info.pStages = stage_create_info;
+	pipeline_create_info.pInputAssemblyState = &assembly_create_info;
+	pipeline_create_info.pVertexInputState = &input_vertex_info;
+	pipeline_create_info.pViewportState = &viewport_create_info;
+	pipeline_create_info.pRasterizationState = &rasterization_create_info;
+	pipeline_create_info.pMultisampleState = &multisample_create_info;
+	pipeline_create_info.pDepthStencilState = &depth_stencil_create_info;
+	pipeline_create_info.pColorBlendState = &color_blend_create_info;
+	pipeline_create_info.pDynamicState = &dynamic_create_info;
+
+	pipeline_create_info.layout = pipelineLayout;
+	pipeline_create_info.renderPass = VkSwapchain::renderPass;
+	pipeline_create_info.subpass = 0;
+
+	pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
+	pipeline_create_info.basePipelineIndex = -1;
+
+	r = vkCreateGraphicsPipelines(VkGlobal::device, VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr, &graphicsPipeline);
+	if (r) {
+		VK_ASSERT(r);
+		return r;
+	}
+
+	//Cleanup
+	vkDestroyShaderModule(VkGlobal::device, shader[VERTEX], nullptr);
+	vkDestroyShaderModule(VkGlobal::device, shader[FRAGMENT], nullptr);
+
+	return VK_SUCCESS;
 }
 bool TextureScene::CheckRoomChange() {
 	if (Scene::ChangeRoom) {
