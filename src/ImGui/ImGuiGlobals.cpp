@@ -207,13 +207,13 @@ namespace {
 		//Descriptor Pool
 		VkDescriptorPoolSize dps = {};
 		dps.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		dps.descriptorCount = 0xFF;
+		dps.descriptorCount = VkSwapchain::frameMax;
 
 		VkDescriptorPoolCreateInfo dp_create_info = {};
 		dp_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 		dp_create_info.poolSizeCount = 1;
 		dp_create_info.pPoolSizes = &dps;
-		dp_create_info.maxSets = 0xFF;
+		dp_create_info.maxSets = VkSwapchain::frameMax;
 		vkCreateDescriptorPool(VkGlobal::device, &dp_create_info, nullptr, &VkImGui::descriptorPool);
 
 		//Descriptor Set Layout

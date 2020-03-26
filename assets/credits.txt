@@ -5,3 +5,7 @@ Link:	https://opengameart.org/content/3-crate-textures-w-bump-normal
 Name: 	Dry Ground Rocks
 Artist:	Rob Tuytel
 Link:	https://texturehaven.com/tex/?t=dry_ground_rocks
+
+Name:	Smiley Happy Face 
+Artist:	OpenClipart-Vectors
+Link:	https://pixabay.com/vectors/smiley-happy-face-smile-lucky-559124/
