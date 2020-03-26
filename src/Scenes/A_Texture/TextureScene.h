@@ -1,4 +1,5 @@
 #include "../Scenes.h"
+#include "../../Asset/Texture.h"
 
 class TextureScene : public Scene {
 public:
@@ -13,4 +14,10 @@ public:
 
 protected:
 	void RenderImGui() override;
+
+private:
+	VkImage tex;
+	VkImageView texView;
+	void LoadTexture(const char* _filePath);
+	Texture Crate;
 };

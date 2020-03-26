@@ -2,6 +2,8 @@
 #include "../../Vulkan/VkGlobals.h"
 #include "../../ImGui/ImGuiGlobals.h"
 
+
+
 TextureScene::TextureScene() {
 	//1.) Update the Surface Information
 	VkSwapchain::UpdateSurfaceData();
@@ -24,16 +26,18 @@ TextureScene::TextureScene() {
 	VkSwapchain::CreateCommandAndSyncBuffers();
 	VkSwapchain::CreatePreset();
 	VkImGui::Init();
+
+	//5.) Setup Diffuse
+	Crate.LoadTexture("../../../assets/Crate/crate2_diffuse.png");
 }
-
 TextureScene::~TextureScene() {
-
+	//Destroy Crate Texture
+	Crate.Free();
 }
 
 void TextureScene::Update(const float& _dt) {
 
 }
-
 void TextureScene::Render(const float& _dtRatio) {
 	//Wait for Queue to be ready
 	vkWaitForFences(VkGlobal::device, 1, &VkSwapchain::fence[VkSwapchain::frameCurrent], VK_TRUE, 0xFFFFFFFFFFFFFFFF);
@@ -58,6 +62,32 @@ void TextureScene::Render(const float& _dtRatio) {
 	//Present
 	Present();
 }
+void TextureScene::RenderImGui() {
+	// Start the Dear ImGui frame
+	ImGui_ImplVulkan_NewFrame();
+	ImGui::NewFrame();
+	ImGui::Begin("Texturing Scene");
+
+	ImGui::NewLine();
+	bool backButton = ImGui::Button("<-");
+	ImGui::SameLine();
+	ImGui::Text("Back to Scene Menu");
+	if (backButton)
+		Scene::ChangeRoom = true;
+
+	//Set to Render
+	ImGui::End();
+	ImGui::Render();
+	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), VkImGui::commandBuffer[VkSwapchain::frameCurrent]);
+}
+bool TextureScene::CheckRoomChange() {
+	if (Scene::ChangeRoom) {
+		Cleanup();
+		Scene::ChangeRoom = false;
+		return true;
+	}
+	return false;
+}
 
 void TextureScene::Reset() {
 	//Cleanup
@@ -78,39 +108,6 @@ void TextureScene::Reset() {
 	VkSwapchain::CreatePreset(false);
 	VkImGui::ResetImage();
 }
-
 void TextureScene::Cleanup() {
 	Scene::Cleanup();
-}
-
-bool TextureScene::CheckRoomChange() {
-	if (Scene::ChangeRoom) {
-		Cleanup();
-		Scene::ChangeRoom = false;
-		return true;
-	}
-	return false;
-}
-
-void TextureScene::RenderImGui() {
-	// Start the Dear ImGui frame
-	ImGui_ImplVulkan_NewFrame();
-	ImGui::NewFrame();
-	ImGui::Begin("Test Menu");
-
-	if (ImGui::CollapsingHeader("Globals")) {
-
-	}
-
-	ImGui::NewLine();
-	bool backButton = ImGui::Button("<-");
-	ImGui::SameLine();
-	ImGui::Text("Back to Scene Menu");
-	if (backButton)
-		Scene::ChangeRoom = true;
-
-	//Set to Render
-	ImGui::End();
-	ImGui::Render();
-	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), VkImGui::commandBuffer[VkSwapchain::frameCurrent]);
 }
