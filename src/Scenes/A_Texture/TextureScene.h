@@ -33,11 +33,12 @@ private:
 
 	//Uniform Buffers
 	const char* TexTech[7];
+	bool checkbox;
 	struct psUniform {
 		//Align #1: Basics (and Black & White)
 		float offsetUV[2];
 		int32_t activeEffect;
-		bool bwGreyScaled;
+		uint32_t bwGreyScaled;
 
 		//Align #2: Gauss Offset + Pixel Size
 		float gbOffset[3];

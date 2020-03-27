@@ -128,11 +128,11 @@ void TextureScene::RenderImGui() {
 		break;
 	case 2:
 		ImGui::Text("Radius"); ImGui::SameLine();
-		ImGui::InputFloat(" ", &uniform.swRadius, 0.001f, 0.01f, 5);
+		ImGui::InputFloat(" ", &uniform.swRadius, 0.1f, 1.0f, 5);
 		ImGui::Text("Angle"); ImGui::SameLine();
 		ImGui::InputFloat("  ", &uniform.swAngle, 0.001f, 0.01f, 5);
 		ImGui::Text("Center"); ImGui::SameLine();
-		ImGui::SliderFloat2("   ", reinterpret_cast<float*>(&uniform.swCenter), -10, 10);
+		ImGui::SliderFloat2("   ", reinterpret_cast<float*>(&uniform.swCenter), 0, 640);
 		break;
 	case 3:
 		ImGui::Text("Pixel Size");
@@ -140,15 +140,15 @@ void TextureScene::RenderImGui() {
 		break;
 	case 4:
 		ImGui::Text("Lum. Coefficient"); ImGui::SameLine();
-		ImGui::SliderFloat4(" ", reinterpret_cast<float*>(&uniform.edLumCoeff), -10, 10);
+		ImGui::SliderFloat4(" ", reinterpret_cast<float*>(&uniform.edLumCoeff), 0, 1);
 		ImGui::Text("Texture Offset"); ImGui::SameLine();
 		ImGui::SliderFloat2("  ", reinterpret_cast<float*>(&uniform.edTexOffset), -10, 10);
 		break;
 	case 5:
 		ImGui::Text("GreyScaled?");  ImGui::SameLine();
-		ImGui::Checkbox(" ", &uniform.bwGreyScaled);
+		if (ImGui::Checkbox(" ", &checkbox)) uniform.bwGreyScaled = checkbox;
 		ImGui::Text("Lum. Coefficient"); ImGui::SameLine();
-		ImGui::SliderFloat4("  ", reinterpret_cast<float*>(&uniform.bwLumCoeff), -10, 10);
+		ImGui::SliderFloat4("  ", reinterpret_cast<float*>(&uniform.bwLumCoeff), 0, 1);
 		break;
 	case 6:
 		ImGui::Text("Aperature");  ImGui::SameLine();
