@@ -31,39 +31,39 @@ layout (binding = 0) uniform psUBO {
 } ubo;
 layout (binding = 1) uniform sampler2D uv_sampler;
 
-vec4 GaussianBlur(vec4 color) {
-	vec2 uv = vsUV;
-	vec3 tc = texture(uv_sampler, uv).rgb * ubo.gbWeight[0];
+vec4 GaussianBlur() {
+	vec2 uv = vsUV + ubo.offsetUV;
+	vec4 tc = texture(uv_sampler, uv) * ubo.gbWeight[0];
 	for (int i = 1; i < 3; ++i) {
-		tc += texture(uv_sampler, uv + vec2(0.0f, ubo.gbOffset[i]) * 0.01f).rgb * ubo.gbWeight[i];
-		tc += texture(uv_sampler, uv - vec2(0.0f, ubo.gbOffset[i]) * 0.01f).rgb * ubo.gbWeight[i];
+		tc += texture(uv_sampler, uv + vec2(0.0f, ubo.gbOffset[i]) * 0.01f) * ubo.gbWeight[i];
+		tc += texture(uv_sampler, uv - vec2(0.0f, ubo.gbOffset[i]) * 0.01f) * ubo.gbWeight[i];
 	}
 
-	return vec4(tc, color.w);
+	return tc;
 }
-vec4 Swirling(vec4 color) {
-	return color;
+vec4 Swirling() {
+	return texture(uv_sampler, vsUV);
 }
-vec4 Pixelate(vec4 color) {
-	int u = int(vsUV.x * ubo.pxSize);
-	int v = int(vsUV.y * ubo.pxSize);
+vec4 Pixelate() {
+	vec2 curUV = vsUV + ubo.offsetUV;
+	int u = int(curUV.x * ubo.pxSize);
+	int v = int(curUV.y * ubo.pxSize);
 	return texture(uv_sampler, vec2(float(u)/ubo.pxSize, float(v)/ubo.pxSize));
 }
-vec4 EdgeDetection(vec4 color) {
-	return color;
+vec4 EdgeDetection() {
+	return texture(uv_sampler, vsUV);
 }
-vec4 BlackAndWhite(vec4 color) {
-	return color;
+vec4 BlackAndWhite() {
+	return texture(uv_sampler, vsUV);
 }
-vec4 FishEye(vec4 color) {
-	return color;
+vec4 FishEye() {
+	return texture(uv_sampler, vsUV);
 }
 
 
 void main() {
 	//Setup Color and UV
-	vec2 curUV = vsUV + ubo.offsetUV;
-	vec4 color = texture(uv_sampler, curUV);
+	vec4 color = texture(uv_sampler, vsUV);
 
 	//Case based on active effect
 	switch(ubo.activeEffect) {
@@ -71,22 +71,22 @@ void main() {
 			psColor = color;
 			break;
 		case 1:
-			psColor = GaussianBlur(color);
+			psColor = GaussianBlur();
 			break;
 		case 2:
-			psColor = Swirling(color);
+			psColor = Swirling();
 			break;
 		case 3:
-			psColor = Pixelate(color);
+			psColor = Pixelate();
 			break;
 		case 4:
-			psColor = EdgeDetection(color);
+			psColor = EdgeDetection();
 			break;
 		case 5:
-			psColor = BlackAndWhite(color);
+			psColor = BlackAndWhite();
 			break;
 		case 6:
-			psColor = FishEye(color);
+			psColor = FishEye();
 			break;
 	}
 }
