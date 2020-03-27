@@ -36,13 +36,13 @@ TextureScene::TextureScene() {
 	TexTech[4] = "Edge Detection";
 	TexTech[5] = "Black & White";
 	TexTech[6] = "Fish Eye";
-	uniform = {};
 	uniformBuffer.resize(VkSwapchain::frameMax);
 	uniformMemory.resize(VkSwapchain::frameMax);
 	for (uint32_t i = 0; i < VkSwapchain::frameMax; ++i)
-		VkGlobal::CreateBuffer(sizeof(psUniform),
+		VkGlobal::CreateBuffer(sizeof(uniform),
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 			&uniformBuffer[i], &uniformMemory[i]);
+	DefaultUBOValues();
 
 	//6.) Setup Descriptor Sets & Pipeline Layout
 	SetupDescriptors();
@@ -136,7 +136,7 @@ void TextureScene::RenderImGui() {
 		break;
 	case 3:
 		ImGui::Text("Pixel Size");
-		ImGui::InputFloat(" ", &uniform.pxSize, 10.0f, 1.0f, 0);
+		ImGui::InputFloat(" ", &uniform.pxSize, 1.0f, 10.0f, 0);
 		break;
 	case 4:
 		ImGui::Text("Lum. Coefficient"); ImGui::SameLine();
@@ -261,7 +261,7 @@ VkResult  TextureScene::SetupDescriptors() {
 		VkDescriptorBufferInfo dbi = {};
 		dbi.buffer = uniformBuffer[i];
 		dbi.offset = 0;
-		dbi.range = sizeof(psUniform);
+		dbi.range = sizeof(uniform);
 
 		std::array<VkWriteDescriptorSet, 2> wds;
 
@@ -521,6 +521,49 @@ VkResult TextureScene::SetupGraphicsPipeline()
 	vkDestroyShaderModule(VkGlobal::device, shader[FRAGMENT], nullptr);
 
 	return VK_SUCCESS;
+}
+void TextureScene::DefaultUBOValues() {
+	//Basic Options
+	uniform.offsetUV[0] = 0.0f;
+	uniform.offsetUV[1] = 0.0f;
+	uniform.activeEffect = 0;
+	
+	//Gaussian Blur:
+	uniform.gbOffset[0] = 0.000f;
+	uniform.gbOffset[1] = 1.384f;
+	uniform.gbOffset[2] = 3.230f;
+
+	uniform.gbWeight[0] = 0.227f;
+	uniform.gbWeight[1] = 0.316f;
+	uniform.gbWeight[2] = 0.070f;
+
+	//Swirling:
+	uniform.swRadius = 50.0f;
+	uniform.swAngle = 0.8f;
+	uniform.swCenter[0] = 30.0f;
+	uniform.swCenter[1] = 30.0f;
+
+	//Pixelate
+	uniform.pxSize = 10.0f;
+
+	//Edge Detection
+	uniform.edLumCoeff[0] = 0.299f;
+	uniform.edLumCoeff[1] = 0.587f;
+	uniform.edLumCoeff[2] = 0.114f;
+	uniform.edLumCoeff[3] = 0.000f;
+
+	uniform.edTexOffset[0] = 0.01f;
+	uniform.edTexOffset[1] = 0.01f;
+
+	//Black and White
+	uniform.bwGreyScaled = false;
+	uniform.bwLumCoeff[0] = 0.299f;
+	uniform.bwLumCoeff[1] = 0.587f;
+	uniform.bwLumCoeff[2] = 0.114f;
+	uniform.bwLumCoeff[3] = 0.000f;
+
+	//Fish-Eye
+	uniform.aperature = 178.0f;
 }
 bool TextureScene::CheckRoomChange() {
 	if (Scene::ChangeRoom) {

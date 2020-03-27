@@ -34,33 +34,33 @@ private:
 	//Uniform Buffers
 	const char* TexTech[7];
 	struct psUniform {
+		//Align #1: Basics (and Black & White)
 		float offsetUV[2];
 		int32_t activeEffect;
+		bool bwGreyScaled;
 
-		//Gaussian Blur
+		//Align #2: Gauss Offset + Pixel Size
 		float gbOffset[3];
+		float pxSize;
+		
+		//Align #3: Gauss Weight + Fisheye Aperature
 		float gbWeight[3];
+		float aperature;
 
-		//Swirling
+		//Align #4: Swirling
+		float swCenter[2];
 		float swRadius;
 		float swAngle;
-		float swCenter[2];
 
-		//Pixelate
-		float pxSize;
-
-		//Edge Detection
-		float edLumCoeff[4];
-		float edTexOffset[2];
-
-		//Black and White
-		bool bwGreyScaled;
+		//Align #5: Black & White Luminence Coefficent
 		float bwLumCoeff[4];
-
-		//Fish-Eye
-		float aperature;
+		
+		//Align #6 & 7: Edge Detection 
+		float edLumCoeff[4];
+		float edTexOffset[4];
 	};
 	psUniform uniform;
 	std::vector<VkBuffer> uniformBuffer;
 	std::vector<VkDeviceMemory> uniformMemory;
+	void DefaultUBOValues();
 };
