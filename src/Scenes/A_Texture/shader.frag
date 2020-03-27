@@ -42,7 +42,19 @@ vec4 GaussianBlur() {
 	return tc;
 }
 vec4 Swirling() {
-	return texture(uv_sampler, vsUV);
+	vec2 texSize = vec2(100, 100);
+	vec2 tc = vsUV * texSize;
+	tc -= ubo.swCenter;
+	float dist = length(tc);
+	if (dist < ubo.swRadius) {
+		float p = (ubo.swRadius - dist) / ubo.swRadius;
+		float theta = p * p * ubo.swAngle * 8.0f;
+		float s = sin(theta);
+		float c = cos(theta);
+		tc = vec2(dot(tc, vec2(c, -s)), dot(tc, vec2(s, c)));
+	}
+	tc += ubo.swCenter;
+	return texture(uv_sampler, tc / texSize);
 }
 vec4 Pixelate() {
 	vec2 curUV = vsUV + ubo.offsetUV;
@@ -54,7 +66,16 @@ vec4 EdgeDetection() {
 	return texture(uv_sampler, vsUV);
 }
 vec4 BlackAndWhite() {
-	return texture(uv_sampler, vsUV);
+	vec4 col = texture(uv_sampler, vsUV);
+	float lum = dot(col, ubo.bwLumCoeff);
+	
+	if (ubo.bwGreyScaled)
+		return vec4(lum, lum, lum, col.w);
+
+	if (lum > 0.8f)
+		return vec4(1, 1, 1, col.w);
+	else
+		return vec4(0, 0, 0, col.w); 
 }
 vec4 FishEye() {
 	return texture(uv_sampler, vsUV);
