@@ -48,6 +48,22 @@ struct VkGlobal {
 	static VkResult CreateImageView(const VkImage& _image, const VkFormat& _format, const VkImageAspectFlags& _imageAspectFlags, VkImageView* _outImageView);
 	static VkResult CopyBufferToImage(const VkCommandPool& _commandPool, const VkQueue& _queue, const VkBuffer& buffer, const VkImage& image, const VkExtent3D& extent);
 	static VkResult TransitionImageLayout(const VkCommandPool& _commandPool, const VkQueue& _queue, const uint32_t& _mipLevel, const VkImage& _image, const VkFormat& _format, const VkImageLayout& _previousLayout, const VkImageLayout& _currentLayout);
+
+	//Templated Methods
+	template <typename buffObj>
+	static VkResult WriteToBuffer(const buffObj& buffer_object, VkDeviceMemory& memory)
+	{
+		void* data;
+		VkResult r = vkMapMemory(VkGlobal::device, memory, 0, sizeof(buffObj), 0, &data);
+
+		if (r)
+			return r;
+
+		memcpy(data, &buffer_object, sizeof(buffObj));
+		vkUnmapMemory(VkGlobal::device, memory);
+
+		return r;
+	}
 };
 
 struct VkSwapchain {
