@@ -130,9 +130,9 @@ void TextureScene::RenderImGui() {
 		ImGui::Text("Radius"); ImGui::SameLine();
 		ImGui::InputFloat(" ", &uniform.swRadius, 0.1f, 1.0f, 5);
 		ImGui::Text("Angle"); ImGui::SameLine();
-		ImGui::InputFloat("  ", &uniform.swAngle, 0.001f, 0.01f, 5);
+		ImGui::InputFloat("  ", &uniform.swAngle, 0.1f, 1.0f, 5);
 		ImGui::Text("Center"); ImGui::SameLine();
-		ImGui::SliderFloat2("   ", reinterpret_cast<float*>(&uniform.swCenter), 0, 640);
+		ImGui::SliderFloat2("   ", reinterpret_cast<float*>(&uniform.swCenter), 0, 100);
 		break;
 	case 3:
 		ImGui::Text("Pixel Size");
@@ -142,7 +142,7 @@ void TextureScene::RenderImGui() {
 		ImGui::Text("Lum. Coefficient"); ImGui::SameLine();
 		ImGui::SliderFloat4(" ", reinterpret_cast<float*>(&uniform.edLumCoeff), 0, 1);
 		ImGui::Text("Texture Offset"); ImGui::SameLine();
-		ImGui::SliderFloat2("  ", reinterpret_cast<float*>(&uniform.edTexOffset), -10, 10);
+		ImGui::SliderFloat2("  ", reinterpret_cast<float*>(&uniform.edTexOffset), 0, 10);
 		break;
 	case 5:
 		ImGui::Text("GreyScaled?");  ImGui::SameLine();
@@ -152,7 +152,7 @@ void TextureScene::RenderImGui() {
 		break;
 	case 6:
 		ImGui::Text("Aperature");  ImGui::SameLine();
-		ImGui::InputFloat(" ", &uniform.aperature, 10.0f, 1.0f, 0);
+		ImGui::InputFloat(" ", &uniform.aperature, 1.0f, 10.0f, 0);
 		break;
 	}
 

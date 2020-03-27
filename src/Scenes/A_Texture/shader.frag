@@ -78,7 +78,23 @@ vec4 BlackAndWhite() {
 		return vec4(0, 0, 0, col.w); 
 }
 vec4 FishEye() {
-	return texture(uv_sampler, vsUV);
+	float apHalf = ubo.aperature * 0.5f * (3.1415927f / 180.0f);
+	float maxFactor = sin(apHalf);
+
+	vec2 uv = vsUV;
+	vec2 xy = 2.0f * uv - 1.0f;
+	float d = length(xy);
+	if (d < 2.0f - maxFactor) {
+		d = length(xy * maxFactor);
+		float z = sqrt(1.0f - d * d);
+		float r = atan(d, z) / 3.1415927f;
+		float phi = atan(xy.y, xy.x);
+
+		uv.x = r * cos(phi) + 0.5f;
+		uv.y = r * sin(phi) + 0.5f;
+	}
+
+	return texture(uv_sampler, uv);
 }
 
 
