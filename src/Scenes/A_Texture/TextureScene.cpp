@@ -25,8 +25,24 @@ TextureScene::TextureScene() {
 	VkSwapchain::CreatePreset();
 	VkImGui::Init();
 
-	//5.) Setup Diffuse
+	//5.) Setup Smiley Texture
 	Smiley.LoadTexture("../../../assets/SmileyFace/smileyface.png");
+
+	//6.) Setup Uniform Buffer
+	TexTech[0] = "None";
+	TexTech[1] = "Gaussian Blur";
+	TexTech[2] = "Swirling";
+	TexTech[3] = "Pixelate";
+	TexTech[4] = "Edge Detection";
+	TexTech[5] = "Black & White";
+	TexTech[6] = "Fish Eye";
+	uniform = {};
+	uniformBuffer.resize(VkSwapchain::frameMax);
+	uniformMemory.resize(VkSwapchain::frameMax);
+	for (uint32_t i = 0; i < VkSwapchain::frameMax; ++i)
+		VkGlobal::CreateBuffer(sizeof(psUniform),
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			&uniformBuffer[i], &uniformMemory[i]);
 
 	//6.) Setup Descriptor Sets & Pipeline Layout
 	SetupDescriptors();
@@ -43,6 +59,12 @@ TextureScene::~TextureScene() {
 	vkDestroySampler(VkGlobal::device, sampler, VK_NULL_HANDLE);
 	vkDestroyDescriptorSetLayout(VkGlobal::device, descriptorSetLayout, VK_NULL_HANDLE);
 	vkDestroyDescriptorPool(VkGlobal::device, descriptorPool, VK_NULL_HANDLE);
+
+	//Destroy Buffers
+	for (uint32_t i = 0; i < VkSwapchain::frameMax; ++i) {
+		vkDestroyBuffer(VkGlobal::device, uniformBuffer[i], VK_NULL_HANDLE);
+		vkFreeMemory(VkGlobal::device, uniformMemory[i], VK_NULL_HANDLE);
+	}
 
 	//Destroy Smiley Texture
 	Smiley.Free();
@@ -62,6 +84,9 @@ void TextureScene::Render(const float& _dtRatio) {
 	FrameStart(VkImGui::commandBuffer[VkSwapchain::frameCurrent], VkImGui::renderPass, VkSwapchain::surfaceExtent2D, VkImGui::frameBuffer, VkImGui::clearColor);
 		RenderImGui();
 	FrameEnd(VkImGui::commandBuffer[VkSwapchain::frameCurrent], VkSwapchain::presentSemaphore[VkSwapchain::frameCurrent], VkImGui::semaphore[VkSwapchain::frameCurrent], VkImGui::fence[VkSwapchain::frameCurrent]);
+
+	//Update Uniform Buffer
+	VkGlobal::WriteToBuffer(uniform, uniformMemory[VkSwapchain::frameCurrent]);
 
 	//Render to Swapchain
 	FrameStart(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], VkSwapchain::renderPass, VkSwapchain::surfaceExtent2D, VkSwapchain::frameBuffer[VkSwapchain::frameCurrent], VkSwapchain::clearValue);
@@ -89,6 +114,48 @@ void TextureScene::RenderImGui() {
 	ImGui::NewFrame();
 	ImGui::Begin("Texturing Scene");
 
+	ImGui::Text("Texture Technique: ");
+	ImGui::Combo("", &uniform.activeEffect, TexTech, IM_ARRAYSIZE(TexTech));
+
+	switch(uniform.activeEffect) {
+	case 0:
+		break;
+	case 1:
+		ImGui::Text("Blur Offset"); ImGui::SameLine();
+		ImGui::SliderFloat3(" ", reinterpret_cast<float*>(&uniform.gbOffset), 0, 10);
+		ImGui::Text("Blur Weight"); ImGui::SameLine();
+		ImGui::SliderFloat3("  ", reinterpret_cast<float*>(&uniform.gbWeight), 0, 1);
+		break;
+	case 2:
+		ImGui::Text("Radius"); ImGui::SameLine();
+		ImGui::InputFloat(" ", &uniform.swRadius, 0.001f, 0.01f, 5);
+		ImGui::Text("Angle"); ImGui::SameLine();
+		ImGui::InputFloat("  ", &uniform.swAngle, 0.001f, 0.01f, 5);
+		ImGui::Text("Center"); ImGui::SameLine();
+		ImGui::SliderFloat2("   ", reinterpret_cast<float*>(&uniform.swCenter), -10, 10);
+		break;
+	case 3:
+		ImGui::Text("Pixel Size");
+		ImGui::InputFloat(" ", &uniform.pxSize, 10.0f, 1.0f, 0);
+		break;
+	case 4:
+		ImGui::Text("Lum. Coefficient"); ImGui::SameLine();
+		ImGui::SliderFloat4(" ", reinterpret_cast<float*>(&uniform.edLumCoeff), -10, 10);
+		ImGui::Text("Texture Offset"); ImGui::SameLine();
+		ImGui::SliderFloat2("  ", reinterpret_cast<float*>(&uniform.edTexOffset), -10, 10);
+		break;
+	case 5:
+		ImGui::Text("GreyScaled?");  ImGui::SameLine();
+		ImGui::Checkbox(" ", &uniform.bwGreyScaled);
+		ImGui::Text("Lum. Coefficient"); ImGui::SameLine();
+		ImGui::SliderFloat4("  ", reinterpret_cast<float*>(&uniform.bwLumCoeff), -10, 10);
+		break;
+	case 6:
+		ImGui::Text("Aperature");  ImGui::SameLine();
+		ImGui::InputFloat(" ", &uniform.aperature, 10.0f, 1.0f, 0);
+		break;
+	}
+
 	ImGui::NewLine();
 	bool backButton = ImGui::Button("<-");
 	ImGui::SameLine();
@@ -103,15 +170,20 @@ void TextureScene::RenderImGui() {
 }
 VkResult  TextureScene::SetupDescriptors() {
 	//Descriptor Pool
-	VkDescriptorPoolSize dps = {};
-	dps.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	dps.descriptorCount = VkSwapchain::frameMax;
+	VkDescriptorPoolSize ubo_dps = {};
+	ubo_dps.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	ubo_dps.descriptorCount = VkSwapchain::frameMax;
 
+	VkDescriptorPoolSize img_dps = {};
+	img_dps.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	img_dps.descriptorCount = VkSwapchain::frameMax;
+
+	std::array<VkDescriptorPoolSize, 2> dps = { ubo_dps, img_dps };
 	VkDescriptorPoolCreateInfo dp_create_info = {};
 	dp_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	dp_create_info.poolSizeCount = 1;
-	dp_create_info.pPoolSizes = &dps;
-	dp_create_info.maxSets = VkSwapchain::frameMax;
+	dp_create_info.poolSizeCount = dps.size();
+	dp_create_info.pPoolSizes = dps.data();
+	dp_create_info.maxSets = 2;
 	VkResult r = vkCreateDescriptorPool(VkGlobal::device, &dp_create_info, nullptr, &descriptorPool);
 	if (r) {
 		VK_ASSERT(r);
@@ -119,16 +191,23 @@ VkResult  TextureScene::SetupDescriptors() {
 	}
 
 	//Descriptor Set Layout
+	VkDescriptorSetLayoutBinding ps_uniform = {};
+	ps_uniform.binding = 0;
+	ps_uniform.descriptorCount = 1;
+	ps_uniform.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	ps_uniform.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
 	VkDescriptorSetLayoutBinding ps_img = {};
-	ps_img.binding = 0;
+	ps_img.binding = 1;
 	ps_img.descriptorCount = 1;
 	ps_img.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	ps_img.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 	VkDescriptorSetLayoutCreateInfo dsl_create_info = {};
+	std::array<VkDescriptorSetLayoutBinding, 2> dsl_binds = { ps_uniform, ps_img };
 	dsl_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	dsl_create_info.bindingCount = 1;
-	dsl_create_info.pBindings = &ps_img;
+	dsl_create_info.bindingCount = dsl_binds.size();
+	dsl_create_info.pBindings = dsl_binds.data();;
 	r = vkCreateDescriptorSetLayout(VkGlobal::device, &dsl_create_info, nullptr, &descriptorSetLayout);
 	if (r) {
 		VK_ASSERT(r);
@@ -172,26 +251,43 @@ VkResult  TextureScene::SetupDescriptors() {
 		return r;
 	}
 
+	VkDescriptorImageInfo dii = {};
+	dii.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	dii.imageView = Smiley.imageView;
+	dii.sampler = sampler;
+
 	for (uint32_t i = 0; i < VkSwapchain::frameMax; ++i)
 	{
-		VkDescriptorImageInfo dii = {};
-		dii.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		dii.imageView = Smiley.imageView;
-		dii.sampler = sampler;
+		VkDescriptorBufferInfo dbi = {};
+		dbi.buffer = uniformBuffer[i];
+		dbi.offset = 0;
+		dbi.range = sizeof(psUniform);
 
-		VkWriteDescriptorSet wds = {};
-		wds.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		wds.dstSet = descriptorSet[i];
-		wds.dstBinding = 0;
-		wds.dstArrayElement = 0;
-		wds.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		wds.descriptorCount = 1;
-		wds.pBufferInfo = nullptr;
-		wds.pImageInfo = &dii;
-		wds.pTexelBufferView = nullptr;
-		wds.pNext = nullptr;
+		std::array<VkWriteDescriptorSet, 2> wds;
 
-		vkUpdateDescriptorSets(VkGlobal::device, 1, &wds, 0, nullptr);
+		wds[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		wds[0].dstSet = descriptorSet[i];
+		wds[0].dstBinding = 0;
+		wds[0].dstArrayElement = 0;
+		wds[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		wds[0].descriptorCount = 1;
+		wds[0].pBufferInfo = &dbi;
+		wds[0].pImageInfo = nullptr;
+		wds[0].pTexelBufferView = nullptr;
+		wds[0].pNext = nullptr;
+
+		wds[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		wds[1].dstSet = descriptorSet[i];
+		wds[1].dstBinding = 1;
+		wds[1].dstArrayElement = 0;
+		wds[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		wds[1].descriptorCount = 1;
+		wds[1].pBufferInfo = nullptr;
+		wds[1].pImageInfo = &dii;
+		wds[1].pTexelBufferView = nullptr;
+		wds[1].pNext = nullptr;
+
+		vkUpdateDescriptorSets(VkGlobal::device, wds.size(), wds.data(), 0, VK_NULL_HANDLE);
 	}
 
 	//Create Pipeline Layout

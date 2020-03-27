@@ -21,10 +21,8 @@ vec2 uv[6] = {
 };
 
 layout (location = 0) out vec2 vsUV;
-layout (location = 1) out float vsActive;
 
 void main() {
-	vsActive = 1;
 	vsUV = uv[gl_VertexIndex];
 	gl_Position = quad[gl_VertexIndex];
 }
