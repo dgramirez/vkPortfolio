@@ -63,7 +63,22 @@ vec4 Pixelate() {
 	return texture(uv_sampler, vec2(float(u)/ubo.pxSize, float(v)/ubo.pxSize));
 }
 vec4 EdgeDetection() {
-	return texture(uv_sampler, vsUV);
+	vec2 curUV = vsUV + ubo.offsetUV;
+	vec4 c[9];
+	c[0] = texture(uv_sampler, curUV + vec2(-ubo.edTexOffset.x, -ubo.edTexOffset.y));
+	c[1] = texture(uv_sampler, curUV + vec2(              0.0f, -ubo.edTexOffset.y));
+	c[2] = texture(uv_sampler, curUV + vec2( ubo.edTexOffset.x, -ubo.edTexOffset.y));
+	
+	c[3] = texture(uv_sampler, curUV + vec2(-ubo.edTexOffset.x, 0.0f));
+	c[4] = texture(uv_sampler, curUV + vec2(              0.0f, 0.0f));
+	c[5] = texture(uv_sampler, curUV + vec2( ubo.edTexOffset.x, 0.0f));
+	
+	c[6] = texture(uv_sampler, curUV + vec2(-ubo.edTexOffset.x, ubo.edTexOffset.y));
+	c[7] = texture(uv_sampler, curUV + vec2(              0.0f, ubo.edTexOffset.y));
+	c[8] = texture(uv_sampler, curUV + vec2( ubo.edTexOffset.x, ubo.edTexOffset.y));
+
+	vec4 trueColor = 8.0f * c[4] - vec4( (c[0] + c[1] + c[2] + c[3] + c[5] + c[6] + c[7] + c[8]).rgb, c[4].w);
+	return trueColor;
 }
 vec4 BlackAndWhite() {
 	vec4 col = texture(uv_sampler, vsUV);
