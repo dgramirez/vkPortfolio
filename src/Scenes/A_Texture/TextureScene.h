@@ -35,30 +35,30 @@ private:
 	const char* TexTech[7];
 	bool checkbox;
 	struct psUniform {
-		//Align #1: Basics (and Black & White)
+		//Align #1: Global & Pixelize {(8+4+4)}
 		float offsetUV[2];
 		int32_t activeEffect;
-		uint32_t bwGreyScaled;
-
-		//Align #2: Gauss Offset + Pixel Size
-		float gbOffset[3];
 		float pxSize;
-		
-		//Align #3: Gauss Weight + Fisheye Aperature
-		float gbWeight[3];
-		float aperature;
 
-		//Align #4: Swirling
+		//Align #2: Gaussian Blur & Black and White. {(12+4), (8+8), (16)}
+		float gbWeight[3];
+		float bwLumPassingValue;
+		float gbOffset[2];
+		float gbUVWeight[2];
+		float bwLumCoeff[4];
+
+		//Align #3: Swirl & Fish-Eye {(8+8), (4+4+4+4)}
+		float swTexSize[2];
 		float swCenter[2];
 		float swRadius;
 		float swAngle;
+		float swThetaFactor;
+		float feAperature;
 
-		//Align #5: Black & White Luminence Coefficent
-		float bwLumCoeff[4];
-		
-		//Align #6 & 7: Edge Detection 
-		float edLumCoeff[4];
-		float edTexOffset[4];
+		//Align #4: Edge Detection and Greyscale {(16) + (4+4)}
+		float edTexOffset[2];
+		float edColorWeight;
+		uint32_t bwGreyScaled;
 	};
 	psUniform uniform;
 	std::vector<VkBuffer> uniformBuffer;

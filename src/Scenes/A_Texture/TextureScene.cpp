@@ -114,45 +114,38 @@ void TextureScene::RenderImGui() {
 	ImGui::NewFrame();
 	ImGui::Begin("Texturing Scene");
 
-	ImGui::Text("Texture Technique: ");
-	ImGui::Combo("", &uniform.activeEffect, TexTech, IM_ARRAYSIZE(TexTech));
+	ImGui::Combo("Texture Technique", &uniform.activeEffect, TexTech, IM_ARRAYSIZE(TexTech));
+	ImGui::DragFloat2("Global UV Offset", reinterpret_cast<float*>(&uniform.offsetUV), 0.001f, -1.0f, 1.0f);
 
 	switch(uniform.activeEffect) {
 	case 0:
 		break;
 	case 1:
-		ImGui::Text("Blur Offset"); ImGui::SameLine();
-		ImGui::SliderFloat3(" ", reinterpret_cast<float*>(&uniform.gbOffset), 0, 10);
-		ImGui::Text("Blur Weight"); ImGui::SameLine();
-		ImGui::SliderFloat3("  ", reinterpret_cast<float*>(&uniform.gbWeight), 0, 1);
+		ImGui::DragFloat3("Blur Offset", reinterpret_cast<float*>(&uniform.gbOffset), 0.01f, -50.0f, 50.0f);
+		ImGui::DragFloat3("Blur Weight", reinterpret_cast<float*>(&uniform.gbWeight), 0.001f, 0.0f, 1.0f);
+		ImGui::DragFloat2("Blur UV Weight", reinterpret_cast<float*>(&uniform.gbUVWeight), 0.001f, 0.0f, 1.0f);
 		break;
 	case 2:
-		ImGui::Text("Radius"); ImGui::SameLine();
-		ImGui::InputFloat(" ", &uniform.swRadius, 0.1f, 1.0f, 5);
-		ImGui::Text("Angle"); ImGui::SameLine();
-		ImGui::InputFloat("  ", &uniform.swAngle, 0.1f, 1.0f, 5);
-		ImGui::Text("Center"); ImGui::SameLine();
-		ImGui::SliderFloat2("   ", reinterpret_cast<float*>(&uniform.swCenter), 0, 100);
+		ImGui::DragFloat2("Swirl Texture Size", reinterpret_cast<float*>(&uniform.swTexSize), 1.0f, 0.0f, 200.0f);
+		ImGui::DragFloat2("Swirl Center", reinterpret_cast<float*>(&uniform.swCenter), 1.0f, -100.0f, 100.0f);
+		ImGui::DragFloat("Swirl Radius", &uniform.swRadius, 1.0f, -100.0f, 100.0f);
+		ImGui::DragFloat("Swirl Angle", &uniform.swAngle, 0.001f, -3.142f, 3.142f);
+		ImGui::DragFloat("Swirl Theta Factor", &uniform.swThetaFactor, 0.01f, -50.0f, 50.0f);
 		break;
 	case 3:
-		ImGui::Text("Pixel Size");
-		ImGui::InputFloat(" ", &uniform.pxSize, 1.0f, 10.0f, 0);
+		ImGui::DragFloat("Pixel Size", &uniform.pxSize, 1.0f, -200.0f, 200.0f);
 		break;
 	case 4:
-		ImGui::Text("Lum. Coefficient"); ImGui::SameLine();
-		ImGui::SliderFloat4(" ", reinterpret_cast<float*>(&uniform.edLumCoeff), 0, 1);
-		ImGui::Text("Texture Offset"); ImGui::SameLine();
-		ImGui::SliderFloat2("  ", reinterpret_cast<float*>(&uniform.edTexOffset), 0, 10);
+		ImGui::DragFloat("Color Weight", &uniform.edColorWeight, 0.1f, -100, 100);
+		ImGui::DragFloat2("Texture Offset", reinterpret_cast<float*>(&uniform.edTexOffset), 0.001f, 0, 1);
 		break;
 	case 5:
-		ImGui::Text("GreyScaled?");  ImGui::SameLine();
-		if (ImGui::Checkbox(" ", &checkbox)) uniform.bwGreyScaled = checkbox;
-		ImGui::Text("Lum. Coefficient"); ImGui::SameLine();
-		ImGui::SliderFloat4("  ", reinterpret_cast<float*>(&uniform.bwLumCoeff), 0, 1);
+		if (ImGui::Checkbox("GreyScaled?", &checkbox)) uniform.bwGreyScaled = checkbox;
+		ImGui::DragFloat("Passing Value", &uniform.bwLumPassingValue, 0.001f, 0.0f, 1.0f);
+		ImGui::DragFloat4("Lum. Coefficient", reinterpret_cast<float*>(&uniform.bwLumCoeff), 0.001f, 0.0f, 1.0f);
 		break;
 	case 6:
-		ImGui::Text("Aperature");  ImGui::SameLine();
-		ImGui::InputFloat(" ", &uniform.aperature, 1.0f, 10.0f, 0);
+		ImGui::DragFloat("Aperature", &uniform.feAperature, 1.0f, -200.0f, 200.0f);
 		break;
 	}
 
@@ -523,47 +516,49 @@ VkResult TextureScene::SetupGraphicsPipeline()
 	return VK_SUCCESS;
 }
 void TextureScene::DefaultUBOValues() {
-	//Basic Options
+	//Global Options
 	uniform.offsetUV[0] = 0.0f;
 	uniform.offsetUV[1] = 0.0f;
 	uniform.activeEffect = 0;
 	
 	//Gaussian Blur:
-	uniform.gbOffset[0] = 0.000f;
-	uniform.gbOffset[1] = 1.384f;
-	uniform.gbOffset[2] = 3.230f;
+	uniform.gbOffset[0] = 1.384f;
+	uniform.gbOffset[1] = 3.230f;
 
 	uniform.gbWeight[0] = 0.227f;
 	uniform.gbWeight[1] = 0.316f;
 	uniform.gbWeight[2] = 0.070f;
 
+	uniform.gbUVWeight[0] = 0.01f;
+	uniform.gbUVWeight[1] = 0.01f;
+
 	//Swirling:
-	uniform.swRadius = 50.0f;
-	uniform.swAngle = 0.8f;
+	uniform.swTexSize[0] = 100.0f;
+	uniform.swTexSize[1] = 100.0f;
 	uniform.swCenter[0] = 30.0f;
 	uniform.swCenter[1] = 30.0f;
+	uniform.swRadius = 50.0f;
+	uniform.swAngle = 0.8f;
+	uniform.swThetaFactor = 8.0f;
 
 	//Pixelate
 	uniform.pxSize = 10.0f;
 
 	//Edge Detection
-	uniform.edLumCoeff[0] = 0.299f;
-	uniform.edLumCoeff[1] = 0.587f;
-	uniform.edLumCoeff[2] = 0.114f;
-	uniform.edLumCoeff[3] = 0.000f;
-
+	uniform.edColorWeight = 8.0f;
 	uniform.edTexOffset[0] = 0.01f;
 	uniform.edTexOffset[1] = 0.01f;
 
 	//Black and White
-	uniform.bwGreyScaled = false;
+	uniform.bwGreyScaled = checkbox = false;
+	uniform.bwLumPassingValue = 0.8f;
 	uniform.bwLumCoeff[0] = 0.299f;
 	uniform.bwLumCoeff[1] = 0.587f;
 	uniform.bwLumCoeff[2] = 0.114f;
 	uniform.bwLumCoeff[3] = 0.000f;
 
 	//Fish-Eye
-	uniform.aperature = 178.0f;
+	uniform.feAperature = 178.0f;
 }
 bool TextureScene::CheckRoomChange() {
 	if (Scene::ChangeRoom) {
