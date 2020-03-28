@@ -47,6 +47,9 @@ namespace VkCore {
 			PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT =
 				reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT> (vkGetInstanceProcAddr(VkGlobal::instance, "vkDestroyDebugReportCallbackEXT"));
 
+			//Destroy Terminal Window
+			free(VkConsole);
+
 			//Ensure the function was actually found
 			if (vkDestroyDebugReportCallbackEXT) {
 				//Destroy the Debug Callback

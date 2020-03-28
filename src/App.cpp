@@ -1,6 +1,6 @@
 #include "Vulkan/VkGlobals.h"
 #include "Scenes/Scenes.h"
-#include "Scenes/A_SceneMenu/SceneMenu.h"
+#include "Scenes/_SceneMenu/SceneMenu.h"
 #include "Vulkan/VkCore.h"
 #include "ImGui/ImGuiGlobals.h"
 #include <chrono>
@@ -78,9 +78,6 @@ namespace App {
 			auto current_time = std::chrono::high_resolution_clock::now();
 			double accumulator = 0;
 
-			//Getter Validation
-			unsigned int __GetX;
-
 			//Process the Window Events
 			while (+GWindow.ProcessWindowEvents() && ImGui::GetCurrentContext()) {
 				//Get Frame Time
@@ -113,6 +110,17 @@ namespace App {
 
 				//Render
 				CurrentScene->Render(ratio);
+
+				//Check Room Change
+				if (CurrentScene->CheckRoomChange()) {
+					if (CurrentScene != Menu) {
+						delete CurrentScene;
+						CurrentScene = Menu;
+						Menu->Init();
+					}
+					else 
+						GWindow = nullptr;
+				}
 			}
 		}
 	}
@@ -142,10 +150,13 @@ namespace App {
 			ImGui::DestroyContext();
 
 		//Cleanup The rest of the Vulkan Objects
+		VkImGui::Cleanup();
+		VkSwapchain::Destroy();
+		if (VkSwapchain::swapchain) {
+			vkDestroySwapchainKHR(VkGlobal::device, VkSwapchain::swapchain, VK_NULL_HANDLE);
+			VkSwapchain::swapchain = VK_NULL_HANDLE;
+		}
 		VkCore::vkCleanup();
-
-		//Destroy Gateware objects
-//		GWindow = nullptr;
 
 		//Set isClean to True
 		isClean = true;

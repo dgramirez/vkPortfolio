@@ -3,19 +3,15 @@
 
 #include "../Scenes.h"
 
-class SceneMenu : public Scene {
+class SceneMenu final : public Scene {
 public:
 	SceneMenu(Scene*& _pScene);
 	~SceneMenu();
 
+	void Init();
 	void Render(const float& _dtRatio) override;
-	void Reset() override;
-	void Cleanup() override;
+	bool CheckRoomChange() override;
 
-	template<typename T>
-	void RegisterScene(const char* test_name) {
-		m_Scenes.push_back(std::make_pair(test_name, []() { return new T(); }));
-	}
 protected:
 	void RenderImGui() override;
 
@@ -24,8 +20,15 @@ private:
 	std::vector<std::pair<const char*, std::function<Scene * ()>>> m_Scenes;
 	uint32_t ImGuiWindowFlags;
 	bool OfCourse;
+	int64_t index;
+	ImGuiTabBarFlags tab_bar_flags;
+	bool ExitApplication;
 
-	void Init();
+	template<typename T>
+	void RegisterScene(const char* test_name) {
+		m_Scenes.push_back(std::make_pair(test_name, []() { return new T(); }));
+	}
+	void RegisterScene();
 };
 
 #endif
