@@ -19,6 +19,7 @@ namespace {
 
 	bool isRunnable = true;
 	bool isClean = false;
+	bool canRender = true;
 }
 
 void GetResolution(uint32_t& _x, uint32_t& _y);
@@ -109,7 +110,8 @@ namespace App {
 				ratio = accumulator / dt;
 
 				//Render
-				CurrentScene->Render(ratio);
+				if (canRender)
+					CurrentScene->Render(ratio);
 
 				//Check Room Change
 				if (CurrentScene->CheckRoomChange()) {
@@ -207,10 +209,15 @@ void GWindowEvent() {
 	GW::SYSTEM::GWindow::EVENT_DATA winEventData;
 	gEvent.Read(winEvent, winEventData);
 
+	canRender = true;
+	if (!winEventData.width || !winEventData.height)
+		canRender = false;
+
 	switch (winEvent) {
 	case GW::SYSTEM::GWindow::Events::MAXIMIZE:
 	case GW::SYSTEM::GWindow::Events::RESIZE:
-		CurrentScene->Reset();
+		if (canRender)
+			CurrentScene->Reset();
 		break;
 	case GW::SYSTEM::GWindow::Events::DESTROY:
 		App::Cleanup();
