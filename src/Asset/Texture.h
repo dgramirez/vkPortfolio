@@ -2,11 +2,11 @@
 #define TEXTURE_H
 
 struct Texture {
-	VkExtent3D dimensions;
-	uint32_t maxMip;
 	VkImage image;
 	VkDeviceMemory imageMemory;
 	VkImageView imageView;
+	VkExtent3D dimensions;
+	uint32_t maxMip;
 
 	Texture();
 	Texture(const char* _filePath);
