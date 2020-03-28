@@ -59,6 +59,9 @@ private:
 		float edTexOffset[2];
 		float edColorWeight;
 		uint32_t bwGreyScaled;
+
+		//Align #5: Gaussian Blur Horizontal Pass {8}
+		float gbOffsetH[2];
 	};
 	psUniform uniform;
 	std::vector<VkBuffer> uniformBuffer;

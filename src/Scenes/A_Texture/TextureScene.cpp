@@ -126,7 +126,8 @@ void TextureScene::RenderImGui() {
 			case 0: //No Texture Technique Applied
 				break;
 			case 1: //Gaussian Blur
-				ImGui::DragFloat3("Blur Offset", reinterpret_cast<float*>(&uniform.gbOffset), 0.01f, -50.0f, 50.0f);
+				ImGui::DragFloat2("Blur Vertical Offset", reinterpret_cast<float*>(&uniform.gbOffset), 0.01f, -50.0f, 50.0f);
+				ImGui::DragFloat2("Blur Horizontal Offset", reinterpret_cast<float*>(&uniform.gbOffsetH), 0.01f, -50.0f, 50.0f);
 				ImGui::DragFloat3("Blur Weight", reinterpret_cast<float*>(&uniform.gbWeight), 0.001f, 0.0f, 1.0f);
 				ImGui::DragFloat2("Blur UV Weight", reinterpret_cast<float*>(&uniform.gbUVWeight), 0.001f, 0.0f, 1.0f);
 				break;
@@ -549,6 +550,8 @@ void TextureScene::DefaultUBOValues() {
 	//Gaussian Blur:
 	uniform.gbOffset[0] = 1.384f;
 	uniform.gbOffset[1] = 3.230f;
+	uniform.gbOffsetH[0] = 1.384f;
+	uniform.gbOffsetH[1] = 3.230f;
 
 	uniform.gbWeight[0] = 0.227f;
 	uniform.gbWeight[1] = 0.316f;

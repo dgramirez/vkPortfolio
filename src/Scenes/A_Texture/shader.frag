@@ -30,6 +30,9 @@ layout (binding = 0) uniform psUBO {
 	vec2 edTexOffset;
 	float edColorWeight;
 	bool bwGreyScaled;
+
+	//Align #5: Gaussian Blur Horizontal Pass
+	vec2 gbOffsetH;
 } ubo;
 layout (binding = 1) uniform sampler2D uv_sampler;
 
@@ -48,8 +51,8 @@ vec4 GaussianBlur() {
 
 	//Horizontal Pass
 		for (int i = 1; i < 3; ++i) {
-		texColor += texture(uv_sampler, uv + vec2(ubo.gbOffset[i-1], 0.0f) * ubo.gbUVWeight[0]) * ubo.gbWeight[i];
-		texColor += texture(uv_sampler, uv - vec2(ubo.gbOffset[i-1], 0.0f) * ubo.gbUVWeight[1]) * ubo.gbWeight[i];
+		texColor += texture(uv_sampler, uv + vec2(ubo.gbOffsetH[i-1], 0.0f) * ubo.gbUVWeight[0]) * ubo.gbWeight[i];
+		texColor += texture(uv_sampler, uv - vec2(ubo.gbOffsetH[i-1], 0.0f) * ubo.gbUVWeight[1]) * ubo.gbWeight[i];
 	}
 
 	//Return the Final Texture Color
