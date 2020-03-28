@@ -114,41 +114,66 @@ void TextureScene::RenderImGui() {
 	ImGui::NewFrame();
 	ImGui::Begin("Texturing Scene");
 
-	ImGui::Combo("Texture Technique", &uniform.activeEffect, TexTech, IM_ARRAYSIZE(TexTech));
-	ImGui::DragFloat2("Global UV Offset", reinterpret_cast<float*>(&uniform.offsetUV), 0.001f, -1.0f, 1.0f);
+	//Start Tabbing
+	if (ImGui::BeginTabBar("Scenes Bar", 0)) {
 
-	switch(uniform.activeEffect) {
-	case 0:
-		break;
-	case 1:
-		ImGui::DragFloat3("Blur Offset", reinterpret_cast<float*>(&uniform.gbOffset), 0.01f, -50.0f, 50.0f);
-		ImGui::DragFloat3("Blur Weight", reinterpret_cast<float*>(&uniform.gbWeight), 0.001f, 0.0f, 1.0f);
-		ImGui::DragFloat2("Blur UV Weight", reinterpret_cast<float*>(&uniform.gbUVWeight), 0.001f, 0.0f, 1.0f);
-		break;
-	case 2:
-		ImGui::DragFloat2("Swirl Texture Size", reinterpret_cast<float*>(&uniform.swTexSize), 1.0f, 0.0f, 200.0f);
-		ImGui::DragFloat2("Swirl Center", reinterpret_cast<float*>(&uniform.swCenter), 1.0f, -100.0f, 100.0f);
-		ImGui::DragFloat("Swirl Radius", &uniform.swRadius, 1.0f, -100.0f, 100.0f);
-		ImGui::DragFloat("Swirl Angle", &uniform.swAngle, 0.001f, -3.142f, 3.142f);
-		ImGui::DragFloat("Swirl Theta Factor", &uniform.swThetaFactor, 0.01f, -50.0f, 50.0f);
-		break;
-	case 3:
-		ImGui::DragFloat("Pixel Size", &uniform.pxSize, 1.0f, -200.0f, 200.0f);
-		break;
-	case 4:
-		ImGui::DragFloat("Color Weight", &uniform.edColorWeight, 0.1f, -100, 100);
-		ImGui::DragFloat2("Texture Offset", reinterpret_cast<float*>(&uniform.edTexOffset), 0.001f, 0, 1);
-		break;
-	case 5:
-		if (ImGui::Checkbox("GreyScaled?", &checkbox)) uniform.bwGreyScaled = checkbox;
-		ImGui::DragFloat("Passing Value", &uniform.bwLumPassingValue, 0.001f, 0.0f, 1.0f);
-		ImGui::DragFloat4("Lum. Coefficient", reinterpret_cast<float*>(&uniform.bwLumCoeff), 0.001f, 0.0f, 1.0f);
-		break;
-	case 6:
-		ImGui::DragFloat("Aperature", &uniform.feAperature, 1.0f, -200.0f, 200.0f);
-		break;
+		//Scene Tab
+		if (ImGui::BeginTabItem("Scenes")) {
+			ImGui::Combo("Texture Technique", &uniform.activeEffect, TexTech, IM_ARRAYSIZE(TexTech));
+			ImGui::DragFloat2("Global UV Offset", reinterpret_cast<float*>(&uniform.offsetUV), 0.001f, -1.0f, 1.0f);
+
+			switch (uniform.activeEffect) {
+			case 0: //No Texture Technique Applied
+				break;
+			case 1: //Gaussian Blur
+				ImGui::DragFloat3("Blur Offset", reinterpret_cast<float*>(&uniform.gbOffset), 0.01f, -50.0f, 50.0f);
+				ImGui::DragFloat3("Blur Weight", reinterpret_cast<float*>(&uniform.gbWeight), 0.001f, 0.0f, 1.0f);
+				ImGui::DragFloat2("Blur UV Weight", reinterpret_cast<float*>(&uniform.gbUVWeight), 0.001f, 0.0f, 1.0f);
+				break;
+			case 2: //Swirling
+				ImGui::DragFloat2("Swirl Texture Size", reinterpret_cast<float*>(&uniform.swTexSize), 1.0f, 0.0f, 200.0f);
+				ImGui::DragFloat2("Swirl Center", reinterpret_cast<float*>(&uniform.swCenter), 1.0f, -100.0f, 100.0f);
+				ImGui::DragFloat("Swirl Radius", &uniform.swRadius, 1.0f, -100.0f, 100.0f);
+				ImGui::DragFloat("Swirl Angle", &uniform.swAngle, 0.001f, -3.142f, 3.142f);
+				ImGui::DragFloat("Swirl Theta Factor", &uniform.swThetaFactor, 0.01f, -50.0f, 50.0f);
+				break;
+			case 3: //Pixelate
+				ImGui::DragFloat("Pixel Size", &uniform.pxSize, 1.0f, -200.0f, 200.0f);
+				break;
+			case 4: //Edge Detection
+				ImGui::DragFloat("Color Weight", &uniform.edColorWeight, 0.1f, -100, 100);
+				ImGui::DragFloat2("Texture Offset", reinterpret_cast<float*>(&uniform.edTexOffset), 0.001f, 0, 1);
+				break;
+			case 5: //Black & White
+				if (ImGui::Checkbox("GreyScaled?", &checkbox)) uniform.bwGreyScaled = checkbox;
+				ImGui::DragFloat("Passing Value", &uniform.bwLumPassingValue, 0.001f, 0.0f, 1.0f);
+				ImGui::DragFloat4("Lum. Coefficient", reinterpret_cast<float*>(&uniform.bwLumCoeff), 0.001f, 0.0f, 1.0f);
+				break;
+			case 6: //Fish-Eye
+				ImGui::DragFloat("Aperature", &uniform.feAperature, 1.0f, -200.0f, 200.0f);
+				break;
+			}
+			ImGui::EndTabItem();
+		}
+		
+		//Options Tab
+		if (ImGui::BeginTabItem("Options")) {
+			ImGui::Text("Comming soon . . .");
+			ImGui::EndTabItem();
+		}
+
+		//Credits Tab
+		if (ImGui::BeginTabItem("Credits")) {
+			ImGui::Text("Credits: ");
+			ImGui::BulletText("OpenClipart-Vectors - Smiley Happy Face");
+			ImGui::EndTabItem();
+		}
+		
+		//End the Tab System
+		ImGui::EndTabBar();
 	}
-
+	
+	//Back
 	ImGui::NewLine();
 	bool backButton = ImGui::Button("<-");
 	ImGui::SameLine();
