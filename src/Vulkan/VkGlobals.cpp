@@ -2,7 +2,7 @@
 
 namespace {
 	VkResult CreateSwapchain() {
-	//Gather Swapchain Count
+		//Gather Swapchain Count
 		if (VkSwapchain::surfaceCapabilities.minImageCount > 0 && VkSwapchain::frameMax < VkSwapchain::surfaceCapabilities.minImageCount)
 			VkSwapchain::frameMax = VkGlobal::surfaceCapabilities.minImageCount;
 		if (VkGlobal::surfaceCapabilities.maxImageCount > 0 && VkSwapchain::frameMax > VkSwapchain::surfaceCapabilities.maxImageCount)
@@ -790,7 +790,7 @@ VkResult VkSwapchain::Destroy() {
 
 	//Cleanup the Swapchain Stuff
 	Cleanup(true);
-	
+
 	//Destroy Command Objects
 	if (commandPool) {
 		vkDestroyCommandPool(VkGlobal::device, commandPool, nullptr);
@@ -801,7 +801,7 @@ VkResult VkSwapchain::Destroy() {
 
 	return VK_SUCCESS;
 }
-VkResult VkSwapchain::Cleanup(const bool &_includeRenderPass) {
+VkResult VkSwapchain::Cleanup(const bool& _includeRenderPass) {
 	//Device Wait
 	if (VkGlobal::device)
 		vkDeviceWaitIdle(VkGlobal::device);

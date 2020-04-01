@@ -79,12 +79,12 @@ void SceneMenu::RenderImGui() {
 		if (ImGui::BeginTabItem("Scenes"))
 		{
 			if (ImGui::CollapsingHeader("Isolated Scenes: Simple")) {
-					for (uint32_t i = 0; i < m_Scenes.size(); ++i)
-						if (ImGui::Selectable(m_Scenes[i].first, false)) {
-							index = i;
-							Scene::ChangeRoom = true;
-							break;
-						}
+				for (uint32_t i = 0; i < m_Scenes.size(); ++i)
+					if (ImGui::Selectable(m_Scenes[i].first, false)) {
+						index = i;
+						Scene::ChangeRoom = true;
+						break;
+					}
 			}
 			if (ImGui::CollapsingHeader("Isolated Scenes: Advanced")) {
 				ImGui::Text("To be continued...");
@@ -121,7 +121,7 @@ void SceneMenu::RenderImGui() {
 			ImGui::Text("Credits for this system setup: ");
 			ImGui::BulletText("7thGate Software .LLC - Gateware");
 			ImGui::BulletText("Omar Cornut - Dear ImGui");
-			ImGui::BulletText("Advanced Micro Devices, Inc. - VMA Allocator"); 
+			ImGui::BulletText("Advanced Micro Devices, Inc. - VMA Allocator");
 			ImGui::BulletText("Sean Barrett - stb image");
 			ImGui::BulletText("Vladimir V.Markelov - Console Colors [Debug]");
 			ImGui::Text("All the credits were obtain from the LICENSE files\nin each directory inside dep.");
@@ -141,13 +141,13 @@ void SceneMenu::RenderImGui() {
 		if (ExitApplication) {
 			ImGui::Begin("Exit Application", &ExitApplication, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
 			ImGui::SetWindowPos({ VkSwapchain::surfaceExtent2D.width / 2.0f - 170.0f, VkSwapchain::surfaceExtent2D.height / 2.0f - 44.0f });
-			ImGui::SetWindowSize({340, 88});
+			ImGui::SetWindowSize({ 340, 88 });
 			ImGui::Text("Are you sure you want to exit the application?");
 			ImGui::NewLine();
-			if (ImGui::Button("No", {75, 0}))
+			if (ImGui::Button("No", { 75, 0 }))
 				ExitApplication = false;
 			ImGui::SameLine(ImGui::GetWindowWidth() - 90);
-			if (ImGui::Button("Yes", {75, 0}))
+			if (ImGui::Button("Yes", { 75, 0 }))
 				Scene::ChangeRoom = true;
 			ImGui::End();
 		}

@@ -42,7 +42,7 @@ vec4 GaussianBlur() {
 
 	//Set Texture Color, Weighted
 	vec4 texColor = texture(uv_sampler, uv) * ubo.gbWeight[0];
-	
+
 	//Vertical Pass
 	for (int i = 1; i < 3; ++i) {
 		texColor += texture(uv_sampler, uv + vec2(0.0f, ubo.gbOffset[i-1]) * ubo.gbUVWeight[0]) * ubo.gbWeight[i];
@@ -83,7 +83,7 @@ vec4 Swirling() {
 
 		//Get the Cosine of Theta
 		float c = cos(theta);
-		
+
 		//Set the Textel by dotting itself to the sin and cos vectors
 		tc = vec2(dot(tc, vec2(c, -s)), dot(tc, vec2(s, c)));
 	}
@@ -101,7 +101,7 @@ vec4 Pixelate() {
 	//Sizing U and V based on Pixel Size, then Casted into an integer
 	int u = int(uv.x * ubo.pxSize);
 	int v = int(uv.y * ubo.pxSize);
-	
+
 	//Return The Texture Coordinate Based on the ratio between uv and Pixel Size.
 	return texture(uv_sampler, vec2(float(u)/ubo.pxSize, float(v)/ubo.pxSize));
 }
@@ -114,11 +114,11 @@ vec4 EdgeDetection() {
 	c[0] = texture(uv_sampler, uv + vec2(-ubo.edTexOffset.x, -ubo.edTexOffset.y));
 	c[1] = texture(uv_sampler, uv + vec2(              0.0f, -ubo.edTexOffset.y));
 	c[2] = texture(uv_sampler, uv + vec2( ubo.edTexOffset.x, -ubo.edTexOffset.y));
-	
+
 	c[3] = texture(uv_sampler, uv + vec2(-ubo.edTexOffset.x, 0.0f));
 	c[4] = texture(uv_sampler, uv + vec2(              0.0f, 0.0f));
 	c[5] = texture(uv_sampler, uv + vec2( ubo.edTexOffset.x, 0.0f));
-	
+
 	c[6] = texture(uv_sampler, uv + vec2(-ubo.edTexOffset.x, ubo.edTexOffset.y));
 	c[7] = texture(uv_sampler, uv + vec2(              0.0f, ubo.edTexOffset.y));
 	c[8] = texture(uv_sampler, uv + vec2( ubo.edTexOffset.x, ubo.edTexOffset.y));
@@ -135,23 +135,23 @@ vec4 BlackAndWhite() {
 
 	//Get the Luminance by dotting the color and luminosity Coefficient
 	float lum = dot(col, ubo.bwLumCoeff);
-	
+
 	//If Greyscaled is checked, return the color with rgb being the luminosity
 	if (ubo.bwGreyScaled)
 		return vec4(lum, lum, lum, col.w);
 
-	//If luminosity value passes, return White (With Alpha!) 
+	//If luminosity value passes, return White (With Alpha!)
 	if (lum > ubo.bwLumPassingValue)
 		return vec4(1, 1, 1, col.w);
 
 	//Return Black (With Alpha!)
-	return vec4(0, 0, 0, col.w); 
+	return vec4(0, 0, 0, col.w);
 }
 vec4 FishEye() {
 	//Set UV with offset
 	vec2 uv = vsUV + ubo.offsetUV;
 
-	//Get Half the Aperature (As a angle in degree) and Set it in Radians 
+	//Get Half the Aperature (As a angle in degree) and Set it in Radians
 	float apHalf = ubo.feAperature * 0.5f * (3.1415927f / 180.0f);
 
 	//Set the Max Factor to the sin of Half of Aperature.
@@ -163,9 +163,9 @@ vec4 FishEye() {
 	//Get the length of the above xy value
 	float d = length(xy);
 
-	//if the length is less than the 
+	//if the length is less than the
 	if (d < 2.0f - maxFactor) {
-		//Set the length to the xy value times maxFactor		
+		//Set the length to the xy value times maxFactor
 		d = length(xy * maxFactor);
 
 		//Get the Sqrt of (1 - d^2)
@@ -185,7 +185,6 @@ vec4 FishEye() {
 	//Return the color based on the uv, modified or not.
 	return texture(uv_sampler, uv);
 }
-
 
 void main() {
 	//Case based on active effect

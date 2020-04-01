@@ -14,7 +14,7 @@ TextureScene::TextureScene() {
 	VkSwapchain::surfaceFormat.format = VK_FORMAT_B8G8R8A8_UNORM;
 	VkSwapchain::surfaceFormat.colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
 
-	//3.) Setup Other Swapchain Proeprties	
+	//3.) Setup Other Swapchain Proeprties
 	VkSwapchain::presetFlags = 0x1;
 	VkSwapchain::frameMax = 2;
 	VkSwapchain::depthFormat = VK_FORMAT_D32_SFLOAT;
@@ -53,7 +53,7 @@ TextureScene::TextureScene() {
 TextureScene::~TextureScene() {
 	//Destroy Graphics Pipeline
 	vkDestroyPipeline(VkGlobal::device, graphicsPipeline, VK_NULL_HANDLE);
-	
+
 	//Destroy Descriptors
 	vkDestroyPipelineLayout(VkGlobal::device, pipelineLayout, VK_NULL_HANDLE);
 	vkDestroySampler(VkGlobal::device, sampler, VK_NULL_HANDLE);
@@ -156,7 +156,7 @@ void TextureScene::RenderImGui() {
 			}
 			ImGui::EndTabItem();
 		}
-		
+
 		//Options Tab
 		if (ImGui::BeginTabItem("Options")) {
 			ImGui::Text("Comming soon . . .");
@@ -169,11 +169,11 @@ void TextureScene::RenderImGui() {
 			ImGui::BulletText("OpenClipart-Vectors - Smiley Happy Face");
 			ImGui::EndTabItem();
 		}
-		
+
 		//End the Tab System
 		ImGui::EndTabBar();
 	}
-	
+
 	//Back
 	ImGui::NewLine();
 	bool backButton = ImGui::Button("<-");
@@ -226,7 +226,7 @@ VkResult  TextureScene::SetupDescriptors() {
 	std::array<VkDescriptorSetLayoutBinding, 2> dsl_binds = { ps_uniform, ps_img };
 	dsl_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 	dsl_create_info.bindingCount = dsl_binds.size();
-	dsl_create_info.pBindings = dsl_binds.data();;
+	dsl_create_info.pBindings = dsl_binds.data();
 	r = vkCreateDescriptorSetLayout(VkGlobal::device, &dsl_create_info, nullptr, &descriptorSetLayout);
 	if (r) {
 		VK_ASSERT(r);
@@ -546,7 +546,7 @@ void TextureScene::DefaultUBOValues() {
 	uniform.offsetUV[0] = 0.0f;
 	uniform.offsetUV[1] = 0.0f;
 	uniform.activeEffect = 0;
-	
+
 	//Gaussian Blur:
 	uniform.gbOffset[0] = 1.384f;
 	uniform.gbOffset[1] = 3.230f;
