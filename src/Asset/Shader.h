@@ -3,9 +3,12 @@
 
 class VkShader {
 public:
+	~VkShader();
 	static VkShader* Create(const char* _filepath);
 	const char* GetSpirVFilepath() const;
 	VkShaderStageFlags GetShaderStage() const;
+	std::vector<VkDescriptorPoolSize> GetDescriptorPool() const;
+	std::vector<VkDescriptorSetLayoutBinding> GetDescriptorSetLayout() const;
 
 private:
 	//Member Variables

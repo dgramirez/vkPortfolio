@@ -4,13 +4,29 @@
 VkShader* VkShader::Create(const char* _filepath) {
 	return new VkShader(_filepath);
 }
+VkShader::~VkShader() {
+	m_DPoolSize.clear();
+	m_DPoolSize.shrink_to_fit();
+
+	m_DSetLayoutBinding.clear();
+	m_DSetLayoutBinding.shrink_to_fit();
+
+	m_SpirV.clear();
+	m_SpirV.shrink_to_fit();
+}
 
 const char* VkShader::GetSpirVFilepath() const {
 	return m_SpirV.c_str();
 }
-
 VkShaderStageFlags VkShader::GetShaderStage() const {
 	return m_ShaderStage;
+}
+
+std::vector<VkDescriptorPoolSize> VkShader::GetDescriptorPool() const {
+	return m_DPoolSize;
+}
+std::vector<VkDescriptorSetLayoutBinding> VkShader::GetDescriptorSetLayout() const {
+	return m_DSetLayoutBinding;
 }
 
 GW::SYSTEM::GFile VkShader::SetupGFile() {

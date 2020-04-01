@@ -6,6 +6,10 @@ public:
 	void AddShader(const VkShader* _shader1, const VkShader* _shader2 = nullptr);
 	void Init();
 	void Bind(const VkCommandBuffer& _commandBuffer, const VkDescriptorSet& _descriptorSet);
+	VkPipelineLayout GetPipelineLayout() const;
+	VkDescriptorPool GetDescriptorPool() const;
+	VkDescriptorSetLayout GetDescriptorSetLayout() const;
+	~VkDescriptor();
 
 private:
 	//Member Variables
@@ -15,7 +19,7 @@ private:
 	VkPipelineLayout m_PipelineLayout;
 
 	//Constructors
-	VkDescriptor() {}
+	VkDescriptor();
 	VkDescriptor(const VkShader* _shader1, const VkShader* _shader2);
 	VkDescriptor(const VkDescriptor& _descriptor) {}
 	VkDescriptor(VkDescriptor&& _descriptor) {}
