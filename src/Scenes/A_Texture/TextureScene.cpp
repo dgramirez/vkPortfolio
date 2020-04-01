@@ -89,7 +89,9 @@ void TextureScene::Render(const float& _dtRatio) {
 
 	//Render to Texture ImGui
 	FrameStart(VkImGui::commandBuffer[VkSwapchain::frameCurrent], VkImGui::renderPass, VkSwapchain::surfaceExtent2D, VkImGui::frameBuffer, VkImGui::clearColor);
-	RenderImGui();
+		vkCmdSetViewport(VkImGui::commandBuffer[VkSwapchain::frameCurrent], 0, 1, &VkSwapchain::viewport);
+		vkCmdSetScissor(VkImGui::commandBuffer[VkSwapchain::frameCurrent], 0, 1, &VkSwapchain::scissor);
+		RenderImGui();
 	FrameEnd(VkImGui::commandBuffer[VkSwapchain::frameCurrent], VkSwapchain::presentSemaphore[VkSwapchain::frameCurrent], VkImGui::semaphore[VkSwapchain::frameCurrent], VkImGui::fence[VkSwapchain::frameCurrent]);
 
 	//Update Uniform Buffer
@@ -97,19 +99,19 @@ void TextureScene::Render(const float& _dtRatio) {
 
 	//Render to Swapchain
 	FrameStart(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], VkSwapchain::renderPass, VkSwapchain::surfaceExtent2D, VkSwapchain::frameBuffer[VkSwapchain::frameCurrent], VkSwapchain::clearValue);
-	//Set Dynamic Viewport and Scissor
-	vkCmdSetViewport(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], 0, 1, &VkSwapchain::viewport);
-	vkCmdSetScissor(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], 0, 1, &VkSwapchain::scissor);
+		//Set Dynamic Viewport and Scissor
+		vkCmdSetViewport(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], 0, 1, &VkSwapchain::viewport);
+		vkCmdSetScissor(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], 0, 1, &VkSwapchain::scissor);
 
-	//Draw Texture
-	descriptor->Bind(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], descriptorSet[VkSwapchain::frameCurrent]);
-	vkCmdBindPipeline(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
-	vkCmdDraw(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], 6, 1, 0, 0);
+		//Draw Texture
+		descriptor->Bind(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], descriptorSet[VkSwapchain::frameCurrent]);
+		vkCmdBindPipeline(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+		vkCmdDraw(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], 6, 1, 0, 0);
 
-	//Draw ImGui
-	vkCmdBindDescriptorSets(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, VkImGui::pipelineLayout, 0, 1, &VkImGui::descriptorSet[VkSwapchain::frameCurrent], 0, nullptr);
-	vkCmdBindPipeline(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, VkImGui::graphicsPipeline);
-	vkCmdDraw(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], 3, 1, 0, 0);
+		//Draw ImGui
+		vkCmdBindDescriptorSets(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, VkImGui::pipelineLayout, 0, 1, &VkImGui::descriptorSet[VkSwapchain::frameCurrent], 0, nullptr);
+		vkCmdBindPipeline(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, VkImGui::graphicsPipeline);
+		vkCmdDraw(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], 3, 1, 0, 0);
 	FrameEnd(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], VkImGui::semaphore[VkSwapchain::frameCurrent], VkSwapchain::renderSemaphore[VkSwapchain::frameCurrent], VkSwapchain::fence[VkSwapchain::frameCurrent]);
 
 	//Present
@@ -370,17 +372,7 @@ VkResult TextureScene::SetupGraphicsPipeline()
 
 	//Viewport State
 	VkViewport viewport = {};
-	viewport.x = 0.0f;
-	viewport.y = 0.0f;
-	viewport.width = VkGlobal::surfaceCapabilities.currentExtent.width;
-	viewport.height = VkGlobal::surfaceCapabilities.currentExtent.height;
-	viewport.minDepth = 0.0f;
-	viewport.maxDepth = 1.0f;
-
 	VkRect2D scissor = {};
-	scissor.offset = { 0,0 };
-	scissor.extent = VkGlobal::surfaceCapabilities.currentExtent;
-
 	VkPipelineViewportStateCreateInfo viewport_create_info = {};
 	viewport_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 	viewport_create_info.viewportCount = 1;
