@@ -1,16 +1,16 @@
 #include "Shader.h"
 #include "../Vulkan/VkGlobals.h"
 
-void* operator new(size_t size) {
-	return malloc(size);
-}
-
 VkShader* VkShader::Create(const char* _filepath) {
 	return new VkShader(_filepath);
 }
 
-void VkShader::Bind(const VkCommandBuffer& _commandBuffer, const VkDescriptorSet& _descriptorSet) {
-	vkCmdBindDescriptorSets(_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_PipelineLayout, 0, 1, &_descriptorSet, 0, nullptr);
+const char* VkShader::GetSpirVFilepath() const {
+	return m_SpirV.c_str();
+}
+
+VkShaderStageFlags VkShader::GetShaderStage() const {
+	return m_ShaderStage;
 }
 
 GW::SYSTEM::GFile VkShader::SetupGFile() {
@@ -167,44 +167,16 @@ void VkShader::SetupDescriptors() {
 	}
 
 	//Put them in a vector
-	std::vector<VkDescriptorPoolSize> dps;
 	if (uboPS.descriptorCount)
-		dps.push_back(uboPS);
+		m_DPoolSize.push_back(uboPS);
 	if (dynUboPS.descriptorCount)
-		dps.push_back(dynUboPS);
+		m_DPoolSize.push_back(dynUboPS);
 	if (imgPS.descriptorCount)
-		dps.push_back(imgPS);
+		m_DPoolSize.push_back(imgPS);
 	if (stgPS.descriptorCount)
-		dps.push_back(stgPS);
+		m_DPoolSize.push_back(stgPS);
 	if (dynStgPS.descriptorCount)
-		dps.push_back(dynStgPS);
-
-	//Create the Descriptor Pool
-	VkDescriptorPoolCreateInfo dp_create_info = {};
-	dp_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	dp_create_info.poolSizeCount = dps.size();
-	dp_create_info.pPoolSizes = dps.data();
-	dp_create_info.maxSets = 0xF;
-	VkResult r = vkCreateDescriptorPool(VkGlobal::device, &dp_create_info, nullptr, &m_DPool);
-	VK_ASSERT(r);
-
-	//Create the Descriptor Set Layout
-	VkDescriptorSetLayoutCreateInfo dsl_create_info = {};
-	dsl_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	dsl_create_info.bindingCount = m_DSetLayoutBinding.size();
-	dsl_create_info.pBindings = m_DSetLayoutBinding.data();;
-	r = vkCreateDescriptorSetLayout(VkGlobal::device, &dsl_create_info, nullptr, &m_DSetLayout);
-	VK_ASSERT(r);
-
-	//Create Pipeline Layout
-	VkPipelineLayoutCreateInfo pipeline_layout_create_info = {};
-	pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipeline_layout_create_info.setLayoutCount = 1;
-	pipeline_layout_create_info.pSetLayouts = &m_DSetLayout;
-	pipeline_layout_create_info.pushConstantRangeCount = 0;
-	pipeline_layout_create_info.pPushConstantRanges = nullptr;
-	r = vkCreatePipelineLayout(VkGlobal::device, &pipeline_layout_create_info, nullptr, &m_PipelineLayout);
-	VK_ASSERT(r);
+		m_DPoolSize.push_back(dynStgPS);
 }
 
 //Private
@@ -218,11 +190,10 @@ VkShader::VkShader(const char* _filepath) {
 	GW::SYSTEM::GFile GFile = SetupGFile();
 
 	//Setup the SpirV Extension
-	VkShaderStageFlags shader_flag = {};
-	SetupExtension(shader_flag);
+	SetupExtension(m_ShaderStage);
 
 	//Fill in the Bindings
-	FillBindings(shader_flag, GFile);
+	FillBindings(m_ShaderStage, GFile);
 
 	//Setup Descriptors
 	SetupDescriptors();
