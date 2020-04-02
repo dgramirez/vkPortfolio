@@ -67,7 +67,7 @@ void VkDescriptor::Init() {
 	std::vector<VkDescriptorPoolSize> dps;
 	std::unordered_map<VkDescriptorType, uint32_t> descType;
 	for (uint32_t i = 0; i < m_Shader.size(); ++i) {
-		auto& pool = m_Shader[i]->GetDescriptorPool();
+		auto pool = m_Shader[i]->GetDescriptorPool();
 		for (uint32_t j = 0; j < pool.size(); ++j) {
 			descType[pool[j].type] += 3;
 		}
@@ -89,7 +89,7 @@ void VkDescriptor::Init() {
 	//Combine All the Bindings Together
 	std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding> binds;
 	for (uint32_t i = 0; i < m_Shader.size(); ++i) {
-		auto& dsl = m_Shader[i]->GetDescriptorSetLayout();
+		auto dsl = m_Shader[i]->GetDescriptorSetLayout();
 		for (uint32_t j = 0; j < dsl.size(); ++j) {
 			binds[dsl[j].binding].binding = dsl[j].binding;
 			binds[dsl[j].binding].stageFlags = dsl[j].stageFlags;
