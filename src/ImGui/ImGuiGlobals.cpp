@@ -383,17 +383,7 @@ namespace {
 
 		//Viewport State
 		VkViewport viewport = {};
-		viewport.x = 0.0f;
-		viewport.y = 0.0f;
-		viewport.width = VkGlobal::surfaceCapabilities.currentExtent.width;
-		viewport.height = VkGlobal::surfaceCapabilities.currentExtent.height;
-		viewport.minDepth = 0.0f;
-		viewport.maxDepth = 1.0f;
-
 		VkRect2D scissor = {};
-		scissor.offset = { 0,0 };
-		scissor.extent = VkGlobal::surfaceCapabilities.currentExtent;
-
 		VkPipelineViewportStateCreateInfo viewport_create_info = {};
 		viewport_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 		viewport_create_info.viewportCount = 1;

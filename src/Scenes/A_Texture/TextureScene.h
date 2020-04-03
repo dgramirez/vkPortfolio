@@ -1,5 +1,6 @@
 #include "../Scenes.h"
 #include "../../Asset/Texture.h"
+#include "../../Asset/Descriptors.h"
 
 class TextureScene : public Scene {
 public:
@@ -26,6 +27,11 @@ private:
 	std::vector<VkDescriptorSet> descriptorSet;
 	VkPipelineLayout pipelineLayout;
 	VkPipeline graphicsPipeline;
+
+	//Shader Test
+	VkShader* shaderVert;
+	VkShader* shaderFrag;
+	VkDescriptor* descriptor;
 
 	//Helper Methods
 	VkResult SetupDescriptors();

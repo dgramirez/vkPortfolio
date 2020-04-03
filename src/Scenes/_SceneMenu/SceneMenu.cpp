@@ -52,16 +52,18 @@ void SceneMenu::Render(const float& _dtRatio) {
 
 	//Render to Texture ImGui
 	FrameStart(VkImGui::commandBuffer[VkSwapchain::frameCurrent], VkImGui::renderPass, VkSwapchain::surfaceExtent2D, VkImGui::frameBuffer, VkImGui::clearColor);
-	RenderImGui();
+		vkCmdSetViewport(VkImGui::commandBuffer[VkSwapchain::frameCurrent], 0, 1, &VkSwapchain::viewport);
+		vkCmdSetScissor(VkImGui::commandBuffer[VkSwapchain::frameCurrent], 0, 1, &VkSwapchain::scissor);
+		RenderImGui();
 	FrameEnd(VkImGui::commandBuffer[VkSwapchain::frameCurrent], VkSwapchain::presentSemaphore[VkSwapchain::frameCurrent], VkImGui::semaphore[VkSwapchain::frameCurrent], VkImGui::fence[VkSwapchain::frameCurrent]);
 
 	//Render to Swapchain
 	FrameStart(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], VkSwapchain::renderPass, VkSwapchain::surfaceExtent2D, VkSwapchain::frameBuffer[VkSwapchain::frameCurrent], VkSwapchain::clearValue);
-	vkCmdSetViewport(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], 0, 1, &VkSwapchain::viewport);
-	vkCmdSetScissor(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], 0, 1, &VkSwapchain::scissor);
-	vkCmdBindDescriptorSets(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, VkImGui::pipelineLayout, 0, 1, &VkImGui::descriptorSet[VkSwapchain::frameCurrent], 0, nullptr);
-	vkCmdBindPipeline(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, VkImGui::graphicsPipeline);
-	vkCmdDraw(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], 3, 1, 0, 0);
+		vkCmdSetViewport(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], 0, 1, &VkSwapchain::viewport);
+		vkCmdSetScissor(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], 0, 1, &VkSwapchain::scissor);
+		vkCmdBindDescriptorSets(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, VkImGui::pipelineLayout, 0, 1, &VkImGui::descriptorSet[VkSwapchain::frameCurrent], 0, nullptr);
+		vkCmdBindPipeline(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, VkImGui::graphicsPipeline);
+		vkCmdDraw(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], 3, 1, 0, 0);
 	FrameEnd(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], VkImGui::semaphore[VkSwapchain::frameCurrent], VkSwapchain::renderSemaphore[VkSwapchain::frameCurrent], VkSwapchain::fence[VkSwapchain::frameCurrent]);
 
 	//Present
@@ -79,12 +81,12 @@ void SceneMenu::RenderImGui() {
 		if (ImGui::BeginTabItem("Scenes"))
 		{
 			if (ImGui::CollapsingHeader("Isolated Scenes: Simple")) {
-					for (uint32_t i = 0; i < m_Scenes.size(); ++i)
-						if (ImGui::Selectable(m_Scenes[i].first, false)) {
-							index = i;
-							Scene::ChangeRoom = true;
-							break;
-						}
+				for (uint32_t i = 0; i < m_Scenes.size(); ++i)
+					if (ImGui::Selectable(m_Scenes[i].first, false)) {
+						index = i;
+						Scene::ChangeRoom = true;
+						break;
+					}
 			}
 			if (ImGui::CollapsingHeader("Isolated Scenes: Advanced")) {
 				ImGui::Text("To be continued...");
@@ -121,7 +123,7 @@ void SceneMenu::RenderImGui() {
 			ImGui::Text("Credits for this system setup: ");
 			ImGui::BulletText("7thGate Software .LLC - Gateware");
 			ImGui::BulletText("Omar Cornut - Dear ImGui");
-			ImGui::BulletText("Advanced Micro Devices, Inc. - VMA Allocator"); 
+			ImGui::BulletText("Advanced Micro Devices, Inc. - VMA Allocator");
 			ImGui::BulletText("Sean Barrett - stb image");
 			ImGui::BulletText("Vladimir V.Markelov - Console Colors [Debug]");
 			ImGui::Text("All the credits were obtain from the LICENSE files\nin each directory inside dep.");
@@ -141,13 +143,13 @@ void SceneMenu::RenderImGui() {
 		if (ExitApplication) {
 			ImGui::Begin("Exit Application", &ExitApplication, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
 			ImGui::SetWindowPos({ VkSwapchain::surfaceExtent2D.width / 2.0f - 170.0f, VkSwapchain::surfaceExtent2D.height / 2.0f - 44.0f });
-			ImGui::SetWindowSize({340, 88});
+			ImGui::SetWindowSize({ 340, 88 });
 			ImGui::Text("Are you sure you want to exit the application?");
 			ImGui::NewLine();
-			if (ImGui::Button("No", {75, 0}))
+			if (ImGui::Button("No", { 75, 0 }))
 				ExitApplication = false;
 			ImGui::SameLine(ImGui::GetWindowWidth() - 90);
-			if (ImGui::Button("Yes", {75, 0}))
+			if (ImGui::Button("Yes", { 75, 0 }))
 				Scene::ChangeRoom = true;
 			ImGui::End();
 		}

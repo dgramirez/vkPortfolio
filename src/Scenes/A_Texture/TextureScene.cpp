@@ -14,7 +14,7 @@ TextureScene::TextureScene() {
 	VkSwapchain::surfaceFormat.format = VK_FORMAT_B8G8R8A8_UNORM;
 	VkSwapchain::surfaceFormat.colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
 
-	//3.) Setup Other Swapchain Proeprties	
+	//3.) Setup Other Swapchain Proeprties
 	VkSwapchain::presetFlags = 0x1;
 	VkSwapchain::frameMax = 2;
 	VkSwapchain::depthFormat = VK_FORMAT_D32_SFLOAT;
@@ -45,6 +45,11 @@ TextureScene::TextureScene() {
 	DefaultUBOValues();
 
 	//6.) Setup Descriptor Sets & Pipeline Layout
+	shaderVert = VkShader::Create("../../../src/Scenes/A_Texture/shader.vert");
+	shaderFrag = VkShader::Create("../../../src/Scenes/A_Texture/shader.frag");
+	
+	descriptor = VkDescriptor::Create(shaderVert, shaderFrag);
+	descriptor->Init();
 	SetupDescriptors();
 
 	//7.) Setup Graphics Pipeline
@@ -53,12 +58,14 @@ TextureScene::TextureScene() {
 TextureScene::~TextureScene() {
 	//Destroy Graphics Pipeline
 	vkDestroyPipeline(VkGlobal::device, graphicsPipeline, VK_NULL_HANDLE);
-	
-	//Destroy Descriptors
-	vkDestroyPipelineLayout(VkGlobal::device, pipelineLayout, VK_NULL_HANDLE);
+
+	//Destroy Sampler
 	vkDestroySampler(VkGlobal::device, sampler, VK_NULL_HANDLE);
-	vkDestroyDescriptorSetLayout(VkGlobal::device, descriptorSetLayout, VK_NULL_HANDLE);
-	vkDestroyDescriptorPool(VkGlobal::device, descriptorPool, VK_NULL_HANDLE);
+
+	//Destroy Descriptor & Shaders
+	delete descriptor;
+	delete shaderVert;
+	delete shaderFrag;
 
 	//Destroy Buffers
 	for (uint32_t i = 0; i < VkSwapchain::frameMax; ++i) {
@@ -82,6 +89,8 @@ void TextureScene::Render(const float& _dtRatio) {
 
 	//Render to Texture ImGui
 	FrameStart(VkImGui::commandBuffer[VkSwapchain::frameCurrent], VkImGui::renderPass, VkSwapchain::surfaceExtent2D, VkImGui::frameBuffer, VkImGui::clearColor);
+		vkCmdSetViewport(VkImGui::commandBuffer[VkSwapchain::frameCurrent], 0, 1, &VkSwapchain::viewport);
+		vkCmdSetScissor(VkImGui::commandBuffer[VkSwapchain::frameCurrent], 0, 1, &VkSwapchain::scissor);
 		RenderImGui();
 	FrameEnd(VkImGui::commandBuffer[VkSwapchain::frameCurrent], VkSwapchain::presentSemaphore[VkSwapchain::frameCurrent], VkImGui::semaphore[VkSwapchain::frameCurrent], VkImGui::fence[VkSwapchain::frameCurrent]);
 
@@ -93,9 +102,9 @@ void TextureScene::Render(const float& _dtRatio) {
 		//Set Dynamic Viewport and Scissor
 		vkCmdSetViewport(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], 0, 1, &VkSwapchain::viewport);
 		vkCmdSetScissor(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], 0, 1, &VkSwapchain::scissor);
-	
+
 		//Draw Texture
-		vkCmdBindDescriptorSets(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet[VkSwapchain::frameCurrent], 0, nullptr);
+		descriptor->Bind(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], descriptorSet[VkSwapchain::frameCurrent]);
 		vkCmdBindPipeline(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 		vkCmdDraw(VkSwapchain::commandBuffer[VkSwapchain::frameCurrent], 6, 1, 0, 0);
 
@@ -156,7 +165,7 @@ void TextureScene::RenderImGui() {
 			}
 			ImGui::EndTabItem();
 		}
-		
+
 		//Options Tab
 		if (ImGui::BeginTabItem("Options")) {
 			ImGui::Text("Comming soon . . .");
@@ -169,11 +178,11 @@ void TextureScene::RenderImGui() {
 			ImGui::BulletText("OpenClipart-Vectors - Smiley Happy Face");
 			ImGui::EndTabItem();
 		}
-		
+
 		//End the Tab System
 		ImGui::EndTabBar();
 	}
-	
+
 	//Back
 	ImGui::NewLine();
 	bool backButton = ImGui::Button("<-");
@@ -188,65 +197,6 @@ void TextureScene::RenderImGui() {
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), VkImGui::commandBuffer[VkSwapchain::frameCurrent]);
 }
 VkResult  TextureScene::SetupDescriptors() {
-	//Descriptor Pool
-	VkDescriptorPoolSize ubo_dps = {};
-	ubo_dps.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	ubo_dps.descriptorCount = VkSwapchain::frameMax;
-
-	VkDescriptorPoolSize img_dps = {};
-	img_dps.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	img_dps.descriptorCount = VkSwapchain::frameMax;
-
-	std::array<VkDescriptorPoolSize, 2> dps = { ubo_dps, img_dps };
-	VkDescriptorPoolCreateInfo dp_create_info = {};
-	dp_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	dp_create_info.poolSizeCount = dps.size();
-	dp_create_info.pPoolSizes = dps.data();
-	dp_create_info.maxSets = 2;
-	VkResult r = vkCreateDescriptorPool(VkGlobal::device, &dp_create_info, nullptr, &descriptorPool);
-	if (r) {
-		VK_ASSERT(r);
-		return r;
-	}
-
-	//Descriptor Set Layout
-	VkDescriptorSetLayoutBinding ps_uniform = {};
-	ps_uniform.binding = 0;
-	ps_uniform.descriptorCount = 1;
-	ps_uniform.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	ps_uniform.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-	VkDescriptorSetLayoutBinding ps_img = {};
-	ps_img.binding = 1;
-	ps_img.descriptorCount = 1;
-	ps_img.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	ps_img.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-	VkDescriptorSetLayoutCreateInfo dsl_create_info = {};
-	std::array<VkDescriptorSetLayoutBinding, 2> dsl_binds = { ps_uniform, ps_img };
-	dsl_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	dsl_create_info.bindingCount = dsl_binds.size();
-	dsl_create_info.pBindings = dsl_binds.data();;
-	r = vkCreateDescriptorSetLayout(VkGlobal::device, &dsl_create_info, nullptr, &descriptorSetLayout);
-	if (r) {
-		VK_ASSERT(r);
-		return r;
-	}
-
-	//Descriptor Sets
-	descriptorSet.resize(VkSwapchain::frameMax);
-	std::vector<VkDescriptorSetLayout> dsl_list(VkSwapchain::frameMax, descriptorSetLayout);
-	VkDescriptorSetAllocateInfo ds_allocate_info = {};
-	ds_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	ds_allocate_info.descriptorSetCount = VkSwapchain::frameMax;
-	ds_allocate_info.descriptorPool = descriptorPool;
-	ds_allocate_info.pSetLayouts = &dsl_list[0];
-	r = vkAllocateDescriptorSets(VkGlobal::device, &ds_allocate_info, descriptorSet.data());
-	if (r) {
-		VK_ASSERT(r);
-		return r;
-	}
-
 	//Create Sampler
 	VkSamplerCreateInfo sampler_create_info = {};
 	sampler_create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -264,7 +214,21 @@ VkResult  TextureScene::SetupDescriptors() {
 	sampler_create_info.minLod = 0.0f;
 	sampler_create_info.maxLod = 1.0f;
 
-	r = vkCreateSampler(VkGlobal::device, &sampler_create_info, nullptr, &sampler);
+	VkResult r = vkCreateSampler(VkGlobal::device, &sampler_create_info, nullptr, &sampler);
+	if (r) {
+		VK_ASSERT(r);
+		return r;
+	}
+
+	//Descriptor Sets
+	descriptorSet.resize(VkSwapchain::frameMax);
+	std::vector<VkDescriptorSetLayout> dsl_list(VkSwapchain::frameMax, descriptor->GetDescriptorSetLayout());
+	VkDescriptorSetAllocateInfo ds_allocate_info = {};
+	ds_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	ds_allocate_info.descriptorSetCount = VkSwapchain::frameMax;
+	ds_allocate_info.descriptorPool = descriptor->GetDescriptorPool();
+	ds_allocate_info.pSetLayouts = &dsl_list[0];
+	r = vkAllocateDescriptorSets(VkGlobal::device, &ds_allocate_info, descriptorSet.data());
 	if (r) {
 		VK_ASSERT(r);
 		return r;
@@ -309,16 +273,7 @@ VkResult  TextureScene::SetupDescriptors() {
 		vkUpdateDescriptorSets(VkGlobal::device, wds.size(), wds.data(), 0, VK_NULL_HANDLE);
 	}
 
-	//Create Pipeline Layout
-	VkPipelineLayoutCreateInfo pipeline_layout_create_info = {};
-	pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipeline_layout_create_info.setLayoutCount = 1;
-	pipeline_layout_create_info.pSetLayouts = &descriptorSetLayout;
-	pipeline_layout_create_info.pushConstantRangeCount = 0;
-	pipeline_layout_create_info.pPushConstantRanges = nullptr;
-	r = vkCreatePipelineLayout(VkGlobal::device, &pipeline_layout_create_info, nullptr, &pipelineLayout);
-	VK_ASSERT(r);
-	return r;
+	return VK_SUCCESS;
 }
 VkResult TextureScene::SetupGraphicsPipeline()
 {
@@ -330,18 +285,14 @@ VkResult TextureScene::SetupGraphicsPipeline()
 	VkShaderModule shader[2] = {};
 	VkPipelineShaderStageCreateInfo stage_create_info[2] = {};
 
-	//Create the GFile
-	const char* vsFilename = "../../../src/Scenes/A_Texture/shader.vert.spv";
-	const char* psFilename = "../../../src/Scenes/A_Texture/shader.frag.spv";
-
 	GW::SYSTEM::GFile ShaderFile; ShaderFile.Create();
 
 	//Get the size of the Vertex Shader
 	uint32_t vsFileSize;
-	ShaderFile.GetFileSize(vsFilename, vsFileSize);
+	ShaderFile.GetFileSize(shaderVert->GetSpirVFilepath(), vsFileSize);
 
 	//Open the Vertex Shader
-	if (-ShaderFile.OpenBinaryRead(vsFilename)) {
+	if (-ShaderFile.OpenBinaryRead(shaderVert->GetSpirVFilepath())) {
 		VK_ASSERT(VK_ERROR_FEATURE_NOT_PRESENT);
 		return VK_ERROR_FEATURE_NOT_PRESENT;
 	}
@@ -373,10 +324,10 @@ VkResult TextureScene::SetupGraphicsPipeline()
 
 	//Get the size of the Fragment Shader
 	uint32_t psFileSize;
-	ShaderFile.GetFileSize(psFilename, psFileSize);
+	ShaderFile.GetFileSize(shaderFrag->GetSpirVFilepath(), psFileSize);
 
 	//Open the Fragment Shader
-	if (-ShaderFile.OpenBinaryRead(psFilename)) {
+	if (-ShaderFile.OpenBinaryRead(shaderFrag->GetSpirVFilepath())) {
 		VK_ASSERT(VK_ERROR_FEATURE_NOT_PRESENT);
 		return VK_ERROR_FEATURE_NOT_PRESENT;
 	}
@@ -421,17 +372,7 @@ VkResult TextureScene::SetupGraphicsPipeline()
 
 	//Viewport State
 	VkViewport viewport = {};
-	viewport.x = 0.0f;
-	viewport.y = 0.0f;
-	viewport.width = VkGlobal::surfaceCapabilities.currentExtent.width;
-	viewport.height = VkGlobal::surfaceCapabilities.currentExtent.height;
-	viewport.minDepth = 0.0f;
-	viewport.maxDepth = 1.0f;
-
 	VkRect2D scissor = {};
-	scissor.offset = { 0,0 };
-	scissor.extent = VkGlobal::surfaceCapabilities.currentExtent;
-
 	VkPipelineViewportStateCreateInfo viewport_create_info = {};
 	viewport_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 	viewport_create_info.viewportCount = 1;
@@ -522,7 +463,7 @@ VkResult TextureScene::SetupGraphicsPipeline()
 	pipeline_create_info.pColorBlendState = &color_blend_create_info;
 	pipeline_create_info.pDynamicState = &dynamic_create_info;
 
-	pipeline_create_info.layout = pipelineLayout;
+	pipeline_create_info.layout = descriptor->GetPipelineLayout();
 	pipeline_create_info.renderPass = VkSwapchain::renderPass;
 	pipeline_create_info.subpass = 0;
 
@@ -546,7 +487,7 @@ void TextureScene::DefaultUBOValues() {
 	uniform.offsetUV[0] = 0.0f;
 	uniform.offsetUV[1] = 0.0f;
 	uniform.activeEffect = 0;
-	
+
 	//Gaussian Blur:
 	uniform.gbOffset[0] = 1.384f;
 	uniform.gbOffset[1] = 3.230f;
