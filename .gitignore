@@ -276,3 +276,7 @@ _Pvt_Extensions
 
 # Auto-Generated VersionInfo file
 Source/GVersion.hpp
+
+#Anything in the Alternative Folder
+assets/Alternative/*
+!assets/Alternative/README.txt
